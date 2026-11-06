@@ -2,12 +2,7 @@ import 'package:dio/dio.dart';
 
 /// Lỗi chuẩn hóa từ response `{ success:false, error:{ code, message, details } }`.
 class ApiException implements Exception {
-  ApiException({
-    required this.code,
-    required this.message,
-    this.statusCode,
-    this.details,
-  });
+  ApiException({required this.code, required this.message, this.statusCode, this.details});
 
   final String code;
   final String message;

@@ -15,7 +15,9 @@ const DEPARTMENTS = Object.freeze({
 
 const USER_STATUS = Object.freeze({ ACTIVE: 'active', INACTIVE: 'inactive' });
 
-const RESIDENT_RELATION = Object.freeze({ OWNER: 'owner', MEMBER: 'member', TENANT: 'tenant' });
+const APARTMENT_STATUS = Object.freeze({ VACANT: 'vacant', OCCUPIED: 'occupied' });
+
+const RESIDENT_RELATION =Object.freeze({ OWNER: 'owner', MEMBER: 'member', TENANT: 'tenant' });
 const RESIDENT_STATUS = Object.freeze({
   PENDING: 'pending',
   ACTIVE: 'active',
@@ -35,6 +37,7 @@ module.exports = {
   ROLES,
   DEPARTMENTS,
   USER_STATUS,
+  APARTMENT_STATUS,
   RESIDENT_RELATION,
   RESIDENT_STATUS,
   VEHICLE_TYPE,
