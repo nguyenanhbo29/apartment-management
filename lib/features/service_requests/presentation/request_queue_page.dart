@@ -9,14 +9,27 @@ import 'widgets.dart';
 
 /// UC-30: Hàng chờ phiếu (Manager). Mặc định phiếu mới, ưu tiên cao lên trước.
 class RequestQueuePage extends ConsumerStatefulWidget {
-  const RequestQueuePage({super.key});
+  const RequestQueuePage({super.key, this.initial = const QueueFilter()});
+
+  /// Bộ lọc ban đầu (dashboard mở sẵn "quá hạn" hoặc một trạng thái).
+  final QueueFilter initial;
+
+  /// Từ query của route: ?filter=overdue | ?status=in_progress | ?status=all
+  factory RequestQueuePage.fromQuery(Map<String, String> q) => RequestQueuePage(
+    initial: switch ((q['filter'], q['status'])) {
+      ('overdue', _) => const QueueFilter(overdue: true),
+      (_, 'all') => const QueueFilter(status: null),
+      (_, final String s) => QueueFilter(status: RequestStatus.parse(s)),
+      _ => const QueueFilter(),
+    },
+  );
 
   @override
   ConsumerState<RequestQueuePage> createState() => _RequestQueuePageState();
 }
 
 class _RequestQueuePageState extends ConsumerState<RequestQueuePage> {
-  QueueFilter _filter = const QueueFilter();
+  late QueueFilter _filter = widget.initial;
   int _reload = 0;
 
   static final _options = <(String, QueueFilter)>[

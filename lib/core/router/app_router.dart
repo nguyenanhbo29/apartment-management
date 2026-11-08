@@ -18,6 +18,8 @@ import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/splash_page.dart';
 import '../../features/communication/presentation/announcement_detail_page.dart';
+import '../../features/dashboard/presentation/dashboard_page.dart';
+import '../../features/dashboard/presentation/staff_report_page.dart';
 import '../../features/communication/presentation/announcement_form_page.dart';
 import '../../features/communication/presentation/announcements_page.dart';
 import '../../features/communication/presentation/notifications_page.dart';
@@ -89,6 +91,9 @@ final _routeRules = <(RegExp, bool Function(AppUser))>[
   (RegExp(r'^/tasks/new$'), _manager),
   (RegExp(r'^/tasks/[^/]+/reassign$'), _manager),
   (RegExp(r'^/tasks'), (u) => u.isManager || u.role == UserRole.staff),
+  // M9
+  (RegExp(r'^/dashboard'), _manager),
+  (RegExp(r'^/reports/staff'), _manager),
   // /announcements, /announcements/:id, /notifications: mọi vai trò
 ];
 
@@ -207,7 +212,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const MyRequestsPage(),
         routes: [
           GoRoute(path: 'new', builder: (_, _) => const RequestFormPage()),
-          GoRoute(path: 'queue', builder: (_, _) => const RequestQueuePage()),
+          GoRoute(
+            path: 'queue',
+            builder: (_, s) => RequestQueuePage.fromQuery(s.uri.queryParameters),
+          ),
           GoRoute(
             path: ':id',
             builder: (_, s) => RequestDetailPage(requestId: id(s)),
@@ -273,7 +281,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // M7 - Nhiệm vụ vận hành
       GoRoute(
         path: '/tasks',
-        builder: (_, _) => const TasksPage(),
+        builder: (_, s) => TasksPage.fromQuery(s.uri.queryParameters),
         routes: [
           GoRoute(path: 'new', builder: (_, _) => const TaskFormPage()),
           GoRoute(
@@ -285,6 +293,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+
+      // M9 - Dashboard vận hành (UC-47), hiệu suất nhân viên (UC-48)
+      GoRoute(path: '/dashboard', builder: (_, _) => const DashboardPage()),
+      GoRoute(path: '/reports/staff', builder: (_, _) => const StaffReportPage()),
     ],
   );
 

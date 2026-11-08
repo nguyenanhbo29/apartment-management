@@ -168,6 +168,15 @@ Cần MongoDB **replica set** (transaction): test tự có; chạy app dùng Atl
 | PATCH | `/api/amenity-bookings/:id/cancel` | người đặt, trước hạn hủy (trả chỗ) | UC-39 |
 | PATCH | `/api/amenity-bookings/:id/cancel-by-staff` | staff facility, manager (`reason`; không áp dụng hạn hủy; lượt chưa kết thúc; trả chỗ) | — |
 
+| GET | `/api/dashboard/operations?from=&to=` | manager | UC-47 |
+| GET | `/api/reports/staff-performance?from=&to=&department=` | manager | UC-48 |
+
+Dashboard / báo cáo: `from`, `to` là ngày giờ VN (YYYY-MM-DD, gồm cả ngày `to`), mặc định 30 ngày gần nhất,
+tối đa 366 ngày. Dashboard: `byStatus`, `open`, `overdue` của phiếu / nhiệm vụ là số **hiện tại** (khớp danh
+sách khi bấm xem); `createdInRange` và lượt đặt tiện ích tính trong khoảng. Báo cáo hiệu suất: hoàn thành
+phiếu tính **lần báo xong đầu tiên**, đúng hạn tính theo lúc nhân viên báo xong (không theo lúc nghiệm thu);
+chỉ số không có dữ liệu trả `null` (không phải 0).
+
 Đặt tiện ích: giữ chỗ bằng collection `amenityslots` (update có điều kiện trong transaction) nên không
 vượt sức chứa khi nhiều người đặt cùng lúc → 409 `SLOT_FULL`; một căn một lượt/slot → 409
 `BOOKING_DUPLICATE`; quá hạn hủy → 409 `CANCEL_DEADLINE_PASSED`. Booking `pending` cũng giữ chỗ.

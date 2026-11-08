@@ -28,5 +28,8 @@ router.use('/amenities', require('./amenity.routes').amenities);
 router.use('/amenity-bookings', require('./amenity.routes').bookings);
 // M7 - Nhiệm vụ vận hành (UC-41, 42)
 router.use('/tasks', require('./operationalTask.routes'));
+// M9 - Dashboard vận hành (UC-47), báo cáo hiệu suất nhân viên (UC-48)
+router.use('/dashboard', require('./report.routes').dashboard);
+router.use('/reports', require('./report.routes').reports);
 
 module.exports = router;

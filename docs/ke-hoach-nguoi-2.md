@@ -764,6 +764,14 @@ Bấm vào một số mở màn danh sách với đúng bộ lọc → các API 
 
 **Flutter (`lib/features/dashboard/`):** thêm `fl_chart`. Thống nhất widget thẻ chỉ số và biểu đồ với Người 1 vì họ làm báo cáo tài chính — đề xuất đặt widget chung ở `lib/core/widgets/charts.dart`.
 
+**Trạng thái (2026-11-08):** ✅ Code + test xong; chưa chạy thử trên app thật.
+- Backend: `services/report.service.js`, routes `/dashboard/operations`, `/reports/staff-performance` (Manager). Khoảng `from`/`to` theo giờ VN, mặc định 30 ngày, tối đa 366.
+- Dashboard: số **đang mở / quá hạn / theo trạng thái là hiện tại** (để khớp danh sách khi bấm vào), số phiếu mới và lượt đặt tiện ích tính trong khoảng. Căn hộ có người ở lấy từ `Apartment.status` (Người 1 tự cập nhật).
+- Báo cáo: hoàn thành phiếu = **lần báo xong đầu tiên**; đúng hạn theo lúc báo xong; thời gian xử lý tính từ lần được giao gần nhất cho chính người đó; lần làm lại quy cho người báo xong trước đó; không có dữ liệu → `null`.
+- Flutter: Dashboard (bộ chọn khoảng, 6 thẻ số bấm mở danh sách nguồn đã lọc, cột phiếu theo trạng thái chạm để mở hàng chờ theo trạng thái, thanh lượt đặt theo tiện ích), Hiệu suất nhân viên (bảng sắp xếp được, lọc bộ phận, "—" cho null). Hàng chờ phiếu và danh sách nhiệm vụ nhận bộ lọc qua URL (`?filter=overdue`, `?status=`). Widget `StatTile`, `SimpleBarChart`, `BarList`, `RangeSelector` đang nằm ở `features/dashboard/presentation/widgets.dart` — chuyển sang `core/widgets/charts.dart` khi Người 1 cần dùng.
+- Test: backend 182/182 (báo cáo: kịch bản giao / làm / trễ hạn / làm lại / chuyển người / nhiệm vụ, số khớp tính tay), Flutter 50/50.
+- **Đã sửa giúp Người 1 (1 dòng, cần báo họ):** `announcement_form_page.dart` dòng 310 `setState(() => _future = _search(q))` trả về Future trong setState → lỗi assertion (debug) khi gõ tìm căn hộ lúc đăng tin. Đổi thành `setState(() { _future = _search(q); })`.
+
 ---
 
 ## 10. Kiểm thử và demo

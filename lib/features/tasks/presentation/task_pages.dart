@@ -145,14 +145,26 @@ class _MyWorkPageState extends ConsumerState<MyWorkPage> {
 // ======================================================================== UC-41 / UC-42 danh sách
 /// Manager: Nhiệm vụ vận hành (tạo, lọc). Staff: Lịch sử nhiệm vụ của mình.
 class TasksPage extends ConsumerStatefulWidget {
-  const TasksPage({super.key});
+  const TasksPage({super.key, this.initial = const TaskFilter()});
+
+  /// Bộ lọc ban đầu (dashboard mở sẵn "quá hạn").
+  final TaskFilter initial;
+
+  /// Từ query của route: ?filter=overdue | ?status=in_progress
+  factory TasksPage.fromQuery(Map<String, String> q) => TasksPage(
+    initial: switch ((q['filter'], q['status'])) {
+      ('overdue', _) => const TaskFilter(overdue: true),
+      (_, final String s) => TaskFilter(status: TaskStatus.parse(s)),
+      _ => const TaskFilter(),
+    },
+  );
 
   @override
   ConsumerState<TasksPage> createState() => _TasksPageState();
 }
 
 class _TasksPageState extends ConsumerState<TasksPage> {
-  TaskFilter _filter = const TaskFilter();
+  late TaskFilter _filter = widget.initial;
   int _reload = 0;
 
   static const _options = <(String, TaskFilter)>[
