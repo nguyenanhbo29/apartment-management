@@ -14,10 +14,6 @@ exports.listForManager = async (req, res) => {
   ok(res, items, meta);
 };
 
-exports.listAssignments = async (req, res) => {
-  const { items, meta } = await service.listAssignments(req.user, req.validated.query);
-  ok(res, items, meta);
-};
 
 exports.getById = async (req, res) => ok(res, await service.getDetail(req.user, req.params.id));
 

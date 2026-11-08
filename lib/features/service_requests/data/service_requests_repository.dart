@@ -21,15 +21,6 @@ class QueueFilter {
   };
 }
 
-enum AssignmentTab {
-  active('Đang làm'),
-  overdue('Quá hạn'),
-  done('Đã xong');
-
-  const AssignmentTab(this.label);
-  final String label;
-}
-
 /// M5 — Phiếu yêu cầu / phản ánh (UC-27 → 34).
 class ServiceRequestsRepository {
   ServiceRequestsRepository(this._api);
@@ -80,14 +71,7 @@ class ServiceRequestsRepository {
     query: {...filter.toQuery(), 'page': page, 'limit': _limit},
   );
 
-  Future<Paged<ServiceRequest>> assignments({
-    AssignmentTab tab = AssignmentTab.active,
-    int page = 1,
-  }) => _api.getPaged(
-    '/me/assignments',
-    ServiceRequest.fromJson,
-    query: {'tab': tab.name, 'page': page, 'limit': _limit},
-  );
+  // Việc của tôi (phiếu + nhiệm vụ): TasksRepository.assignments (features/tasks)
 
   Future<ServiceRequest> get(String id) async => ServiceRequest.fromJson(
     await _api.get<Map<String, dynamic>>('$_base/$id'),

@@ -108,6 +108,8 @@ Loại notification các module đang dùng (`link.kind` để app mở đúng m
 | `booking_submitted` | `amenity_booking` | Nhân viên Facility (tiện ích cần duyệt) |
 | `booking_confirmed` / `booking_rejected` | `amenity_booking` | Người đặt (kể cả hết hạn duyệt) |
 | `booking_cancelled_by_staff` | `amenity_booking` | Người đặt (ban quản lý hủy do sự cố) |
+| `task_assigned` / `task_unassigned` / `task_cancelled` | `task` | Nhân viên được giao (mới / cũ) |
+| `task_completed` | `task` | Manager tạo nhiệm vụ |
 
 ## API vận hành (Người 2)
 
@@ -129,7 +131,14 @@ Cần MongoDB **replica set** (transaction): test tự có; chạy app dùng Atl
 | PATCH | `/api/service-requests/:id/finish` (multipart) | nhân viên được giao (`note`, ảnh) | UC-33 |
 | PATCH | `/api/service-requests/:id/confirm` | người tạo (`rating` 1–5, `feedback?`) | UC-34 |
 | PATCH | `/api/service-requests/:id/reopen` | người tạo (`reason`) | UC-34 |
-| GET | `/api/me/assignments?tab=active\|overdue\|done` | staff | UC-31 |
+| GET | `/api/me/assignments?tab=active\|overdue\|done` | staff — phiếu + nhiệm vụ, mỗi mục có `kind: 'request'\|'task'` | UC-31 |
+| POST | `/api/tasks` | manager (`title`, `category?`, `location?`, `priority?`, `department`, `staffId`, `deadline`) | UC-41 |
+| GET | `/api/tasks?status=&department=&staffId=&overdue=&from=&to=` | manager (tất cả) / staff (luôn chỉ của mình) | UC-41, 42 |
+| GET | `/api/tasks/:id` | manager, nhân viên được giao; kèm `timeline`, `allowedActions` | UC-42 |
+| PATCH | `/api/tasks/:id/reassign` | manager (`department`, `staffId`, `deadline?`, `note`) | UC-41 |
+| PATCH | `/api/tasks/:id/cancel` | manager (`reason`) | UC-41 |
+| PATCH | `/api/tasks/:id/start` | nhân viên được giao | UC-31 |
+| PATCH | `/api/tasks/:id/complete` (multipart) | nhân viên được giao (`note?`, ảnh) | UC-31 |
 
 | POST | `/api/vehicles` (multipart, ảnh tùy chọn) | resident đang ở căn `apartmentId` | UC-13 |
 | GET | `/api/vehicles/mine?status=` | resident (xe các căn mình ở) | UC-15 |

@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/network/api_client.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/data/app_user.dart';
 import '../../staff/data/staff_repository.dart';
-import '../../staff/presentation/staff_list_page.dart';
+import '../../staff/presentation/staff_picker.dart';
 import '../application/service_requests_providers.dart';
 import '../data/models.dart';
 import '../data/service_requests_repository.dart';
@@ -201,7 +200,7 @@ class _AssignRequestPageState extends ConsumerState<AssignRequestPage> {
                       'Nhân viên',
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
-                    _StaffPicker(
+                    StaffPicker(
                       key: ValueKey(_department),
                       department: _department!,
                       excludeId: widget.reassign ? r.assignedStaffId : null,
@@ -228,84 +227,6 @@ class _AssignRequestPageState extends ConsumerState<AssignRequestPage> {
           );
         },
       ),
-    );
-  }
-}
-
-/// Danh sách nhân viên đang làm của bộ phận, ít việc lên trước để cân tải.
-/// Đổi bộ phận thì đổi `key` để tải lại.
-class _StaffPicker extends ConsumerStatefulWidget {
-  const _StaffPicker({
-    super.key,
-    required this.department,
-    required this.onSelected,
-    this.selectedId,
-    this.excludeId,
-  });
-
-  final Department department;
-  final String? selectedId;
-  final String? excludeId;
-  final ValueChanged<StaffMember> onSelected;
-
-  @override
-  ConsumerState<_StaffPicker> createState() => _StaffPickerState();
-}
-
-class _StaffPickerState extends ConsumerState<_StaffPicker> {
-  late final Future<Paged<StaffMember>> _future = ref
-      .read(staffRepositoryProvider)
-      .list(
-        department: widget.department,
-        status: UserStatus.active,
-        page: 1,
-        limit: 100,
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedId = widget.selectedId;
-    final excludeId = widget.excludeId;
-    final onSelected = widget.onSelected;
-    return FutureBuilder(
-      future: _future,
-      builder: (context, snap) {
-        if (snap.hasError) return ErrorView(error: snap.error!);
-        if (!snap.hasData) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final staff =
-            snap.data!.items.where((s) => s.user.id != excludeId).toList()
-              ..sort((a, b) => a.openWork.compareTo(b.openWork));
-        if (staff.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Text('Bộ phận này chưa có nhân viên đang làm'),
-          );
-        }
-        return Column(
-          children: [
-            for (final s in staff)
-              Container(
-                decoration: s.user.id == selectedId
-                    ? BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer
-                            .withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(8),
-                      )
-                    : null,
-                child: StaffTile(
-                  staff: s,
-                  showDepartment: false,
-                  onTap: () => onSelected(s),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }

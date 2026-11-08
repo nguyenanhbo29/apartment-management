@@ -26,5 +26,7 @@ router.use('/visitors', require('./visitor.routes'));
 // M6 - Đặt tiện ích (UC-35 → 39)
 router.use('/amenities', require('./amenity.routes').amenities);
 router.use('/amenity-bookings', require('./amenity.routes').bookings);
+// M7 - Nhiệm vụ vận hành (UC-41, 42)
+router.use('/tasks', require('./operationalTask.routes'));
 
 module.exports = router;

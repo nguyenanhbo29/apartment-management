@@ -724,6 +724,14 @@ Nhiệm vụ do Manager tự tạo, không có cư dân nghiệm thu.
 
 **Flutter (`lib/features/tasks/`):** Manager (Danh sách có lọc, Tạo/Giao, Chuyển người); Staff (bổ sung vào Việc của tôi, Lịch sử việc).
 
+**Trạng thái (2026-11-08):** ✅ Code + test xong; chưa chạy thử trên app thật.
+- Backend: `models/OperationalTask.js` (thêm `category`, `location`, `priority`), `services/operationalTask.service.js` (bảng `TRANSITIONS`, lịch sử qua `RequestHistory.taskId`), `routes/operationalTask.routes.js`. `GET /tasks` dùng chung cho UC-41 (Manager) và UC-42 (Staff, luôn chỉ của mình); timeline nằm trong `GET /tasks/:id` thay vì `/tasks/:id/history` riêng.
+- **Gộp UC-31:** tách `services/assignment.service.js`, `GET /me/assignments` trả phiếu + nhiệm vụ (`kind`), trộn theo hạn rồi ưu tiên, phân trang đúng qua các trang.
+- Chuyển người khi đang làm → nhiệm vụ về `assigned` để người mới bấm bắt đầu lại.
+- `assertNoOpenWork` và số việc ở UC-40 giờ đếm cả nhiệm vụ thật.
+- Flutter: `features/tasks/` — Nhiệm vụ vận hành (Manager: lọc, giao, chuyển người, hủy), Lịch sử nhiệm vụ (Staff), Chi tiết + timeline + Bắt đầu / Hoàn thành kèm ảnh, **Việc của tôi** chuyển sang đây và hiển thị cả phiếu lẫn nhiệm vụ. `StaffPicker` tách ra `features/staff/presentation/staff_picker.dart` dùng chung M5 / M7.
+- Test: backend 178/178 (M7: 10 test — luồng, chuyển người, hủy, bảng trạng thái, Staff không xem được việc người khác, lọc quá hạn / ngày, trộn + phân trang Việc của tôi, chặn khóa nhân viên), Flutter 46/46.
+
 ### 9.2. Dashboard vận hành (UC-47)
 
 `GET /dashboard/operations?from=&to=` — `manager`.

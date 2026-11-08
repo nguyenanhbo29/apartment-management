@@ -24,12 +24,12 @@ import '../../features/communication/presentation/notifications_page.dart';
 import '../../features/home/home_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/service_requests/presentation/assign_request_page.dart';
-import '../../features/service_requests/presentation/my_assignments_page.dart';
 import '../../features/service_requests/presentation/my_requests_page.dart';
 import '../../features/service_requests/presentation/request_detail_page.dart';
 import '../../features/service_requests/presentation/request_form_page.dart';
 import '../../features/service_requests/presentation/request_queue_page.dart';
 import '../../features/staff/presentation/staff_list_page.dart';
+import '../../features/tasks/presentation/task_pages.dart';
 import '../../features/users/presentation/user_detail_page.dart';
 import '../../features/users/presentation/user_form_page.dart';
 import '../../features/users/presentation/user_list_page.dart';
@@ -85,6 +85,10 @@ final _routeRules = <(RegExp, bool Function(AppUser))>[
   (RegExp(r'^/amenities/[^/]+/edit$'), _manager),
   (RegExp(r'^/bookings$'), _resident),
   (RegExp(r'^/bookings/queue$'), (u) => _staffOf(u, Department.facility) || u.isManager),
+  // M7: Manager quản lý; Staff xem lịch sử / chi tiết nhiệm vụ của mình
+  (RegExp(r'^/tasks/new$'), _manager),
+  (RegExp(r'^/tasks/[^/]+/reassign$'), _manager),
+  (RegExp(r'^/tasks'), (u) => u.isManager || u.role == UserRole.staff),
   // /announcements, /announcements/:id, /notifications: mọi vai trò
 ];
 
@@ -219,7 +223,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      GoRoute(path: '/assignments', builder: (_, _) => const MyAssignmentsPage()),
+      // UC-31: phiếu + nhiệm vụ (M7)
+      GoRoute(path: '/assignments', builder: (_, _) => const MyWorkPage()),
 
       // M3 - Xe và khách
       GoRoute(
@@ -262,6 +267,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: 'queue', builder: (_, _) => const BookingQueuePage()),
           GoRoute(path: ':id', builder: (_, s) => BookingDetailPage(bookingId: id(s))),
+        ],
+      ),
+
+      // M7 - Nhiệm vụ vận hành
+      GoRoute(
+        path: '/tasks',
+        builder: (_, _) => const TasksPage(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const TaskFormPage()),
+          GoRoute(
+            path: ':id',
+            builder: (_, s) => TaskDetailPage(taskId: id(s)),
+            routes: [
+              GoRoute(path: 'reassign', builder: (_, s) => TaskFormPage(taskId: id(s))),
+            ],
+          ),
         ],
       ),
     ],

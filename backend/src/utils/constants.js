@@ -77,6 +77,13 @@ const TASK_STATUS = Object.freeze({
   CANCELLED: 'cancelled',
 });
 const OPEN_TASK_STATUSES = Object.freeze([TASK_STATUS.ASSIGNED, TASK_STATUS.IN_PROGRESS]);
+const TASK_CATEGORY = Object.freeze({
+  INSPECTION: 'inspection', // kiểm tra định kỳ (PCCC, thang máy...)
+  MAINTENANCE: 'maintenance',
+  CLEANING: 'cleaning',
+  PATROL: 'patrol',
+  OTHER: 'other',
+});
 
 // M3 - Khách
 const VISITOR_STATUS = Object.freeze({
@@ -104,6 +111,7 @@ module.exports = {
   OPEN_REQUEST_STATUSES,
   TASK_STATUS,
   OPEN_TASK_STATUSES,
+  TASK_CATEGORY,
   VISITOR_STATUS,
   AMENITY_STATUS,
   BOOKING_STATUS,

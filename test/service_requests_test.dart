@@ -264,4 +264,69 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'Manager phân công phiếu: chọn nhân viên (ít việc lên trước) rồi gửi',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      Map<String, dynamic>? sent;
+      Map<String, dynamic> staff(String id, String name, int open) => {
+        ...userJson(
+          id: id,
+          fullName: name,
+          role: 'staff',
+          department: 'technical',
+        ),
+        'openRequests': open,
+        'openTasks': 0,
+      };
+      final adapter = FakeAdapter((req) {
+        switch ((req.method, req.path)) {
+          case ('GET', '/users/me'):
+            return okJson(userJson(role: 'manager'));
+          case ('GET', '/notifications/unread-count'):
+            return okJson({'count': 0});
+          case ('GET', '/service-requests/r1'):
+            return okJson(_req(actions: ['assign', 'reject']));
+          case ('GET', '/staff'):
+            return okJson(
+              [staff('s1', 'Bận Rộn', 5), staff('s2', 'Rảnh Rỗi', 0)],
+              {'page': 1, 'limit': 100, 'total': 2},
+            );
+          case ('PATCH', '/service-requests/r1/assign'):
+            sent = req.data as Map<String, dynamic>;
+            return okJson(_req(status: 'assigned'));
+        }
+        return okJson(null);
+      });
+      await tester.pumpWidget(
+        buildTestApp(adapter: adapter, tokens: MemoryTokenStorage('t')),
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      );
+      container.read(routerProvider).push('/requests/r1/assign');
+      await tester.pumpAndSettle();
+
+      // Ít việc lên trước để cân tải
+      final free = tester.getTopLeft(find.text('Rảnh Rỗi')).dy;
+      final busy = tester.getTopLeft(find.text('Bận Rộn')).dy;
+      expect(free, lessThan(busy));
+
+      // Trước đây chọn nhân viên làm lỗi assertion (ListTile trong Container có màu nền)
+      await tester.tap(find.text('Rảnh Rỗi'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Phân công'));
+      await tester.pumpAndSettle();
+      expect(sent, containsPair('staffId', 's2'));
+      expect(sent, containsPair('department', 'technical'));
+      expect(sent!['deadline'], isA<String>());
+      expect(find.text('Đã phân công'), findsOneWidget);
+    },
+  );
 }

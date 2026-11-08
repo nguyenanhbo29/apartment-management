@@ -52,6 +52,8 @@ const _features = <_Feature>[
   _Feature('Tiện ích', Icons.pool_outlined, '/amenities', _amenityViewer),
   _Feature('Lịch đặt của tôi', Icons.event_available_outlined, '/bookings', _resident),
   _Feature('Duyệt đặt tiện ích', Icons.fact_check_outlined, '/bookings/queue', _bookingReviewer),
+  _Feature('Nhiệm vụ vận hành', Icons.add_task, '/tasks', _manager),
+  _Feature('Lịch sử nhiệm vụ', Icons.history, '/tasks', _staff),
 ];
 
 /// Trang chủ: hiển thị chức năng đúng với vai trò người dùng.

@@ -192,30 +192,7 @@ async function listForManager({ page, limit, status, priority, type, department,
   return { items: items.map(withOverdue), meta: paged(page, limit, total) };
 }
 
-// ---------------------------------------------------------------- UC-31: việc của tôi (Staff)
-const ASSIGNMENT_TABS = {
-  active: () => ({ status: { $in: [...OPEN_REQUEST_STATUSES] } }),
-  overdue: () => ({ status: { $in: [...OPEN_REQUEST_STATUSES] }, deadline: { $lt: new Date() } }),
-  done: () => ({ status: { $in: [S.WAITING_CONFIRMATION, S.CLOSED] } }),
-};
-
-async function listAssignments(actor, { page, limit, tab }) {
-  const filter = { assignedStaffId: actor._id, ...ASSIGNMENT_TABS[tab]() };
-  const sort = tab === 'done' ? { updatedAt: -1 } : { deadline: 1, priorityRank: 1 };
-  const [items, total] = await Promise.all([
-    ServiceRequest.find(filter)
-      .populate('apartmentId', 'code floor')
-      .sort(sort)
-      .skip((page - 1) * limit)
-      .limit(limit),
-    ServiceRequest.countDocuments(filter),
-  ]);
-  // kind: M7 sẽ trộn thêm nhiệm vụ (kind 'task') vào cùng danh sách
-  return {
-    items: items.map((r) => ({ kind: 'request', ...withOverdue(r) })),
-    meta: paged(page, limit, total),
-  };
-}
+// UC-31 (việc của tôi): gộp phiếu + nhiệm vụ ở services/assignment.service.js
 
 // ---------------------------------------------------------------- UC-29: chi tiết + timeline
 // Ghi chú nội bộ (lý do giao / chuyển người) không hiện cho cư dân
@@ -515,10 +492,10 @@ module.exports = {
   AUTO_CLOSE_DAYS,
   allowedActions,
   computeOverdue,
+  withOverdue,
   createRequest,
   listMine,
   listForManager,
-  listAssignments,
   getDetail,
   transition,
   autoCloseExpired,
