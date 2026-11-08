@@ -8,8 +8,12 @@ cp .env.example .env     # chỉnh MONGODB_URI, JWT_SECRET
 npm install
 npm run seed             # tạo tài khoản Manager đầu tiên
 npm run dev              # http://localhost:3000/api/health
-npm test                 # dùng DB apartment_management_test
+npm test                 # tự bật MongoDB replica set tạm trong RAM (mongodb-memory-server)
 ```
+
+Test không cần cài MongoDB: `tests/globalSetup.js` bật một replica set tạm (hỗ trợ transaction)
+cho cả bộ test rồi tắt khi xong. Lần chạy đầu tải binary `mongod` (~100 MB) vào cache.
+Muốn chạy trên Mongo thật thì đặt `MONGODB_TEST_URI` (Mongo đó phải là replica set nếu test có transaction).
 
 ## Quy ước chung
 - Cấu trúc: `routes -> controllers -> services -> models`.

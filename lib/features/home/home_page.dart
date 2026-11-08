@@ -29,6 +29,8 @@ const _features = <_Feature>[
   _Feature('Căn hộ', Icons.apartment_outlined, '/apartments', _residentViewer),
   _Feature('Cư dân', Icons.groups_outlined, '/residents', _residentViewer),
   _Feature('Duyệt cư trú', Icons.how_to_reg_outlined, '/registrations', _manager),
+  // Module vận hành (Người 2)
+  _Feature('Nhân viên', Icons.badge_outlined, '/staff', _manager),
   // M1
   _Feature('Tài khoản', Icons.manage_accounts_outlined, '/users', _manager),
   _Feature('Hồ sơ', Icons.person_outline, '/profile', _all),

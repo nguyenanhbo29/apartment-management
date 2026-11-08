@@ -19,6 +19,8 @@ const vehicleSchema = new mongoose.Schema(
     rejectReason: String,
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     reviewedAt: Date,
+    // Thời điểm ngừng sử dụng (cư dân hủy, Manager vô hiệu, hoặc căn hộ không còn người ở)
+    deactivatedAt: Date,
   },
   { timestamps: true }
 );

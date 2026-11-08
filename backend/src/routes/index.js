@@ -15,4 +15,7 @@ router.use('/residents', require('./resident.routes'));
 router.use('/announcements', require('./announcement.routes'));
 router.use('/notifications', require('./notification.routes'));
 
+// Module vận hành (Người 2) - UC-40 nhân viên theo bộ phận
+router.use('/staff', require('./staff.routes'));
+
 module.exports = router;

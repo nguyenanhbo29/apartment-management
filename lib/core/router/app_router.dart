@@ -21,6 +21,7 @@ import '../../features/communication/presentation/announcements_page.dart';
 import '../../features/communication/presentation/notifications_page.dart';
 import '../../features/home/home_page.dart';
 import '../../features/profile/profile_page.dart';
+import '../../features/staff/presentation/staff_list_page.dart';
 import '../../features/users/presentation/user_detail_page.dart';
 import '../../features/users/presentation/user_form_page.dart';
 import '../../features/users/presentation/user_list_page.dart';
@@ -46,6 +47,8 @@ final _routeRules = <(RegExp, bool Function(AppUser))>[
   (RegExp(r'^/registrations'), _manager),
   (RegExp(r'^/my-apartments'), _resident),
   (RegExp(r'^/announcements/new$'), _manager),
+  // Module vận hành (Người 2)
+  (RegExp(r'^/staff'), _manager),
   // /announcements, /announcements/:id, /notifications: mọi vai trò
 ];
 
@@ -154,6 +157,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: '/notifications', builder: (_, _) => const NotificationsPage()),
+
+      // Module vận hành (Người 2) - UC-40
+      GoRoute(path: '/staff', builder: (_, _) => const StaffListPage()),
     ],
   );
 

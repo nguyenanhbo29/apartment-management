@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const { AppError, ERROR_CODES } = require('../utils/errors');
-const { ROLES } = require('../utils/constants');
+const { ROLES, USER_STATUS } = require('../utils/constants');
+const { assertNoOpenWork } = require('./operationsHooks');
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -57,6 +58,10 @@ async function updateStatus(actorId, id, status) {
     throw new AppError(ERROR_CODES.BAD_REQUEST, 'Không thể tự khóa/mở tài khoản của chính mình');
   }
   const user = await findOrThrow(id);
+  // Không khóa Staff còn phiếu/nhiệm vụ đang mở
+  if (user.role === ROLES.STAFF && status === USER_STATUS.INACTIVE && user.status !== status) {
+    await assertNoOpenWork(user._id);
+  }
   user.status = status;
   await user.save();
   return user;
@@ -67,8 +72,13 @@ async function updateRole(actorId, id, { role, department }) {
     throw new AppError(ERROR_CODES.BAD_REQUEST, 'Không thể tự đổi vai trò của chính mình');
   }
   const user = await findOrThrow(id);
+  const nextDepartment = role === ROLES.STAFF ? department : null;
+  // Không đổi vai trò/bộ phận của Staff còn phiếu/nhiệm vụ đang mở
+  if (user.role === ROLES.STAFF && (role !== ROLES.STAFF || nextDepartment !== user.department)) {
+    await assertNoOpenWork(user._id);
+  }
   user.role = role;
-  user.department = role === ROLES.STAFF ? department : null;
+  user.department = nextDepartment;
   await user.save();
   return user;
 }
