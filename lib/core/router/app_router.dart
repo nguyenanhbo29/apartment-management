@@ -21,6 +21,12 @@ import '../../features/communication/presentation/announcements_page.dart';
 import '../../features/communication/presentation/notifications_page.dart';
 import '../../features/home/home_page.dart';
 import '../../features/profile/profile_page.dart';
+import '../../features/service_requests/presentation/assign_request_page.dart';
+import '../../features/service_requests/presentation/my_assignments_page.dart';
+import '../../features/service_requests/presentation/my_requests_page.dart';
+import '../../features/service_requests/presentation/request_detail_page.dart';
+import '../../features/service_requests/presentation/request_form_page.dart';
+import '../../features/service_requests/presentation/request_queue_page.dart';
 import '../../features/staff/presentation/staff_list_page.dart';
 import '../../features/users/presentation/user_detail_page.dart';
 import '../../features/users/presentation/user_form_page.dart';
@@ -49,6 +55,12 @@ final _routeRules = <(RegExp, bool Function(AppUser))>[
   (RegExp(r'^/announcements/new$'), _manager),
   // Module vận hành (Người 2)
   (RegExp(r'^/staff'), _manager),
+  // M5: /requests = phiếu của tôi (Resident); /requests/:id mọi vai trò (backend lọc phạm vi)
+  (RegExp(r'^/requests$'), _resident),
+  (RegExp(r'^/requests/new$'), _resident),
+  (RegExp(r'^/requests/queue$'), _manager),
+  (RegExp(r'^/requests/[^/]+/assign$'), _manager),
+  (RegExp(r'^/assignments'), (u) => u.role == UserRole.staff),
   // /announcements, /announcements/:id, /notifications: mọi vai trò
 ];
 
@@ -160,6 +172,30 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Module vận hành (Người 2) - UC-40
       GoRoute(path: '/staff', builder: (_, _) => const StaffListPage()),
+
+      // M5 - Phiếu yêu cầu / phản ánh
+      GoRoute(
+        path: '/requests',
+        builder: (_, _) => const MyRequestsPage(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const RequestFormPage()),
+          GoRoute(path: 'queue', builder: (_, _) => const RequestQueuePage()),
+          GoRoute(
+            path: ':id',
+            builder: (_, s) => RequestDetailPage(requestId: id(s)),
+            routes: [
+              GoRoute(
+                path: 'assign',
+                builder: (_, s) => AssignRequestPage(
+                  requestId: id(s),
+                  reassign: s.uri.queryParameters['reassign'] == '1',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(path: '/assignments', builder: (_, _) => const MyAssignmentsPage()),
     ],
   );
 

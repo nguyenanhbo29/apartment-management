@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:apartment_management/core/router/app_router.dart';
 import 'package:apartment_management/features/auth/data/app_user.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,6 +49,10 @@ void main() {
   testWidgets('Manager xem nhân viên theo bộ phận kèm tải việc', (
     tester,
   ) async {
+    // Mục "Nhân viên" nằm cuối trang chủ: màn hình cao để thấy hết
+    tester.view.physicalSize = const Size(1080, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final adapter = FakeAdapter((req) {
       switch (req.path) {
         case '/users/me':

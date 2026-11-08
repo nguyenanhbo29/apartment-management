@@ -36,6 +36,17 @@ const VEHICLE_STATUS = Object.freeze({
 // ---------------------------------------------------------------- Module vận hành (Người 2)
 // M5 - Phiếu yêu cầu / phản ánh
 const REQUEST_TYPE = Object.freeze({ REPAIR: 'repair', COMPLAINT: 'complaint' });
+const REQUEST_CATEGORY = Object.freeze({
+  ELECTRIC: 'electric',
+  PLUMBING: 'plumbing',
+  INTERNET: 'internet',
+  ELEVATOR: 'elevator',
+  HYGIENE: 'hygiene',
+  NOISE: 'noise',
+  SECURITY: 'security',
+  SERVICE: 'service',
+  OTHER: 'other',
+});
 const REQUEST_PRIORITY = Object.freeze({
   LOW: 'low',
   NORMAL: 'normal',
@@ -86,6 +97,7 @@ const BOOKING_STATUS = Object.freeze({
 
 module.exports = {
   REQUEST_TYPE,
+  REQUEST_CATEGORY,
   REQUEST_PRIORITY,
   REQUEST_STATUS,
   OPEN_REQUEST_STATUSES,

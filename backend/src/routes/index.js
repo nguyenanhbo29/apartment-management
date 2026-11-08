@@ -17,5 +17,8 @@ router.use('/notifications', require('./notification.routes'));
 
 // Module vận hành (Người 2) - UC-40 nhân viên theo bộ phận
 router.use('/staff', require('./staff.routes'));
+// M5 - Phiếu yêu cầu / phản ánh (UC-27 → 34)
+router.use('/service-requests', require('./serviceRequest.routes'));
+router.use('/me', require('./me.routes'));
 
 module.exports = router;

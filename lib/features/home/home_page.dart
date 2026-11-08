@@ -19,6 +19,7 @@ bool _all(AppUser _) => true;
 bool _manager(AppUser u) => u.isManager;
 bool _resident(AppUser u) => u.isResident;
 bool _residentViewer(AppUser u) => u.canViewResidents;
+bool _staff(AppUser u) => u.role == UserRole.staff;
 
 /// Danh sách chức năng theo vai trò. Mỗi module thêm mục vào đây khi hoàn thành.
 const _features = <_Feature>[
@@ -29,11 +30,14 @@ const _features = <_Feature>[
   _Feature('Căn hộ', Icons.apartment_outlined, '/apartments', _residentViewer),
   _Feature('Cư dân', Icons.groups_outlined, '/residents', _residentViewer),
   _Feature('Duyệt cư trú', Icons.how_to_reg_outlined, '/registrations', _manager),
-  // Module vận hành (Người 2)
-  _Feature('Nhân viên', Icons.badge_outlined, '/staff', _manager),
   // M1
   _Feature('Tài khoản', Icons.manage_accounts_outlined, '/users', _manager),
   _Feature('Hồ sơ', Icons.person_outline, '/profile', _all),
+  // Module vận hành (Người 2) — để cuối, không đổi vị trí các mục của Người 1
+  _Feature('Phiếu của tôi', Icons.build_circle_outlined, '/requests', _resident),
+  _Feature('Phiếu yêu cầu', Icons.assignment_outlined, '/requests/queue', _manager),
+  _Feature('Việc của tôi', Icons.engineering_outlined, '/assignments', _staff),
+  _Feature('Nhân viên', Icons.badge_outlined, '/staff', _manager),
 ];
 
 /// Trang chủ: hiển thị chức năng đúng với vai trò người dùng.

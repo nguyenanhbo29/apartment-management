@@ -91,6 +91,43 @@ Loại notification các module đang dùng (`link.kind` để app mở đúng m
 | `resident_registration_approved` | `apartment` | Chủ hộ khai báo |
 | `resident_registration_rejected` | `apartment` | Chủ hộ khai báo |
 | `announcement` | `announcement` | Đối tượng của tin |
+| `service_request_created` | `service_request` | Manager |
+| `service_request_rejected` | `service_request` | Người tạo phiếu |
+| `service_request_accepted` | `service_request` | Người tạo phiếu (khi được phân công) |
+| `service_request_assigned` | `service_request` | Nhân viên được giao |
+| `service_request_unassigned` | `service_request` | Nhân viên cũ (khi chuyển người) |
+| `service_request_started` | `service_request` | Người tạo phiếu |
+| `service_request_waiting_confirmation` | `service_request` | Người tạo phiếu |
+| `service_request_closed` | `service_request` | Nhân viên được giao |
+| `service_request_reopened` | `service_request` | Nhân viên được giao, Manager |
+| `service_request_auto_closed` | `service_request` | Người tạo phiếu, nhân viên được giao |
+
+## API vận hành (Người 2)
+
+Cần MongoDB **replica set** (transaction): test tự có; chạy app dùng Atlas hoặc Mongo local bật replica set.
+Ảnh upload: multipart, trường `images`, tối đa 5 ảnh, 5 MB/ảnh, JPEG/PNG; phục vụ tại `/uploads/...`.
+
+| Method | Path | Quyền | UC |
+|---|---|---|---|
+| GET | `/api/staff?department=&status=&q=` | manager (kèm `openRequests`, `openTasks`) | UC-40 |
+| GET | `/api/staff/departments` | mọi vai trò | UC-40 |
+| POST | `/api/service-requests` (multipart) | resident đang ở căn `apartmentId` | UC-27, 28 |
+| GET | `/api/service-requests/mine?status=&type=` | resident | UC-29 |
+| GET | `/api/service-requests?status=&priority=&type=&department=&overdue=` | manager (mặc định `pending`, `status=all`) | UC-30 |
+| GET | `/api/service-requests/:id` | theo phạm vi*, kèm `timeline`, `allowedActions` | UC-29 |
+| PATCH | `/api/service-requests/:id/reject` | manager (`reason`) | UC-30 |
+| PATCH | `/api/service-requests/:id/assign` | manager (`department`, `staffId`, `deadline`, `priority?`, `note?`) | UC-30 |
+| PATCH | `/api/service-requests/:id/reassign` | manager (`department`, `staffId`, `deadline?`, `note`) | UC-30 |
+| PATCH | `/api/service-requests/:id/start` | nhân viên được giao | UC-32 |
+| PATCH | `/api/service-requests/:id/finish` (multipart) | nhân viên được giao (`note`, ảnh) | UC-33 |
+| PATCH | `/api/service-requests/:id/confirm` | người tạo (`rating` 1–5, `feedback?`) | UC-34 |
+| PATCH | `/api/service-requests/:id/reopen` | người tạo (`reason`) | UC-34 |
+| GET | `/api/me/assignments?tab=active\|overdue\|done` | staff | UC-31 |
+
+\* Manager: mọi phiếu. Staff: phiếu đang giao cho mình. Resident: phiếu mình tạo + phiếu sửa chữa của
+căn mình đang ở. Ngoài phạm vi trả 404. Sai trạng thái trả 409 `INVALID_STATE`.
+Luồng: `pending → assigned → in_progress → waiting_confirmation → closed`; nhánh `rejected`,
+`reopened`; job mỗi giờ tự đóng phiếu chờ nghiệm thu quá 7 ngày.
 
 `MAIL_MODE=console` (mặc định): OTP in ra console và trả trong `data.devOtp` để demo.
 `MAIL_MODE=smtp`: gửi email thật, cần `SMTP_USER` + `SMTP_PASS` (Gmail App Password).

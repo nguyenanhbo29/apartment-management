@@ -1,15 +1,12 @@
-const mongoose = require('mongoose');
 const request = require('supertest');
 const app = require('../src/app');
-const { setupDb, teardownDb, createUser, bearer } = require('./helpers');
-
-// Model ServiceRequest thật chưa có (M5): bản tối giản để kiểm tra đếm việc đang mở
-const ServiceRequest =
-  mongoose.models.ServiceRequest ||
-  mongoose.model(
-    'ServiceRequest',
-    new mongoose.Schema({ assignedStaffId: mongoose.Schema.Types.ObjectId, status: String })
-  );
+const {
+  setupDb,
+  teardownDb,
+  createUser,
+  bearer,
+  createServiceRequestDoc,
+} = require('./helpers');
 
 let manager;
 let tech1;
@@ -24,11 +21,9 @@ beforeAll(async () => {
   tech2 = await createUser({ role: 'staff', department: 'technical', fullName: 'Bình Kỹ Thuật', status: 'inactive' });
   security = await createUser({ role: 'staff', department: 'security', fullName: 'Cường Bảo Vệ' });
   resident = await createUser({ role: 'resident' });
-  await ServiceRequest.create([
-    { assignedStaffId: tech1.user._id, status: 'in_progress' },
-    { assignedStaffId: tech1.user._id, status: 'assigned' },
-    { assignedStaffId: tech1.user._id, status: 'closed' }, // không tính
-  ]);
+  await createServiceRequestDoc({ assignedStaffId: tech1.user._id, status: 'in_progress' });
+  await createServiceRequestDoc({ assignedStaffId: tech1.user._id, status: 'assigned' });
+  await createServiceRequestDoc({ assignedStaffId: tech1.user._id, status: 'closed' }); // không tính
 });
 afterAll(teardownDb);
 

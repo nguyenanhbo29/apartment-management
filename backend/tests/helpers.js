@@ -30,4 +30,21 @@ async function createUser(overrides = {}) {
 
 const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 
-module.exports = { setupDb, teardownDb, createUser, bearer };
+// ---------------------------------------------------------------- Module vận hành (Người 2)
+/** Tạo phiếu trực tiếp trong DB (bỏ qua API) để dựng dữ liệu ở trạng thái bất kỳ. */
+async function createServiceRequestDoc(overrides = {}) {
+  seq += 1;
+  const ServiceRequest = require('../src/models/ServiceRequest');
+  return ServiceRequest.create({
+    requestCode: `SR-T${String(seq).padStart(5, '0')}`,
+    requestType: 'repair',
+    category: 'electric',
+    title: `Phiếu thử ${seq}`,
+    description: 'Mô tả phiếu thử',
+    apartmentId: new mongoose.Types.ObjectId(),
+    createdBy: new mongoose.Types.ObjectId(),
+    ...overrides,
+  });
+}
+
+module.exports = { setupDb, teardownDb, createUser, bearer, createServiceRequestDoc };

@@ -4,16 +4,13 @@ const app = require('../src/app');
 const Apartment = require('../src/models/Apartment');
 const ApartmentResident = require('../src/models/ApartmentResident');
 const Vehicle = require('../src/models/Vehicle');
-const { setupDb, teardownDb, createUser, bearer } = require('./helpers');
-
-// Model ServiceRequest thật chưa có (M5): dùng bản tối giản để kiểm tra assertNoOpenWork.
-const ServiceRequest =
-  mongoose.models.ServiceRequest ||
-  mongoose.model(
-    'ServiceRequest',
-    // Phải khai báo trường: db.js bật strictQuery, trường lạ trong filter sẽ bị bỏ
-    new mongoose.Schema({ assignedStaffId: mongoose.Schema.Types.ObjectId, status: String })
-  );
+const {
+  setupDb,
+  teardownDb,
+  createUser,
+  bearer,
+  createServiceRequestDoc,
+} = require('./helpers');
 
 let manager;
 const api = (token) => ({
@@ -89,7 +86,7 @@ describe('onResidentMovedOut (gọi từ UC-11 move-out)', () => {
 describe('assertNoOpenWork (gọi từ UC-05 khóa / đổi vai trò)', () => {
   test('Staff còn phiếu đang mở: không khóa, không đổi vai trò, không đổi bộ phận', async () => {
     const staff = await createUser({ role: 'staff', department: 'technical' });
-    await ServiceRequest.create({ assignedStaffId: staff.user._id, status: 'in_progress' });
+    await createServiceRequestDoc({ assignedStaffId: staff.user._id, status: 'in_progress' });
     const url = `/api/users/${staff.user._id}`;
 
     const lock = await api(manager.token).patch(`${url}/status`, { status: 'inactive' });
@@ -105,7 +102,7 @@ describe('assertNoOpenWork (gọi từ UC-05 khóa / đổi vai trò)', () => {
 
   test('Staff chỉ có phiếu đã đóng: khóa được', async () => {
     const staff = await createUser({ role: 'staff', department: 'technical' });
-    await ServiceRequest.create({ assignedStaffId: staff.user._id, status: 'closed' });
+    await createServiceRequestDoc({ assignedStaffId: staff.user._id, status: 'closed' });
 
     const res = await api(manager.token).patch(`/api/users/${staff.user._id}/status`, {
       status: 'inactive',

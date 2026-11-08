@@ -497,6 +497,13 @@ requestHistorySchema.index({ requestId: 1, createdAt: 1 });
 
 **Xong khi:** chạy trọn luồng 3 vai trò trên app, kể cả nhánh làm lại và từ chối.
 
+**Trạng thái (2026-11-08):** ✅ Code + test xong; **chưa chạy thử trên app thật** (cần Mongo replica set: Atlas hoặc Mongo local bật replica set).
+- Backend: `models/ServiceRequest.js` (thêm `priorityRank` để sắp hàng chờ, `reopenCount`, `autoClosed`), `models/RequestHistory.js`, `services/serviceRequest.service.js` (bảng `TRANSITIONS`, `allowedActions` trả cho app), `routes/serviceRequest.routes.js`, `routes/me.routes.js` (`GET /me/assignments`), `jobs/index.js` (tự đóng mỗi giờ, khởi trong `server.js`).
+- Thêm danh mục `REQUEST_CATEGORY` (điện, nước, internet, thang máy, vệ sinh, tiếng ồn, an ninh, thái độ phục vụ, khác).
+- Flutter: `features/service_requests/` — Phiếu của tôi, Tạo phiếu (chọn ảnh), Chi tiết + timeline + nút theo `allowedActions`, Hàng chờ (Manager), Phân công / Chuyển người (chọn nhân viên theo tải việc), Việc của tôi (Staff). Thông báo `service_request` mở chi tiết phiếu.
+- Mục trang chủ của module vận hành đặt **cuối danh sách** để không đổi vị trí mục của Người 1.
+- Test: backend 122/122 (M5: 29 test — luồng đủ, bảng máy trạng thái 7×7, tranh chấp, phạm vi xem, timeline, job), Flutter 29/29.
+
 ---
 
 ## 7. Giai đoạn 3: M3 — Xe và khách (UC-13 → 18)

@@ -57,6 +57,7 @@ class StaffRepository {
     UserStatus? status,
     String q = '',
     int page = 1,
+    int limit = 20,
   }) => _api.getPaged(
     '/staff',
     StaffMember.fromJson,
@@ -65,7 +66,7 @@ class StaffRepository {
       'status': ?status?.name,
       if (q.trim().isNotEmpty) 'q': q.trim(),
       'page': page,
-      'limit': 20,
+      'limit': limit,
     },
   );
 
