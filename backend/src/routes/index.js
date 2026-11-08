@@ -23,5 +23,8 @@ router.use('/me', require('./me.routes'));
 // M3 - Xe và khách (UC-13 → 18)
 router.use('/vehicles', require('./vehicle.routes'));
 router.use('/visitors', require('./visitor.routes'));
+// M6 - Đặt tiện ích (UC-35 → 39)
+router.use('/amenities', require('./amenity.routes').amenities);
+router.use('/amenity-bookings', require('./amenity.routes').bookings);
 
 module.exports = router;

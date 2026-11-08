@@ -70,8 +70,10 @@ async function onResidentMovedOut(apartmentId, userId) {
       );
     }
 
-    // TODO(M6): hủy booking tương lai và trả slot. Phải đi qua amenityBooking.service
-    // (đổi trạng thái có điều kiện + $inc slot trong cùng transaction), không updateMany ở đây.
+    // M6: hủy booking tương lai và trả chỗ (đổi trạng thái có điều kiện + $inc slot
+    // trong cùng transaction). require muộn để tránh vòng phụ thuộc khi nạp module.
+    const bookingService = require('./amenityBooking.service');
+    await bookingService.cancelFutureForMoveOut(apartmentId, stillOccupied ? userId : null);
   } catch (err) {
     console.error('[onResidentMovedOut] failed:', err.message);
   }

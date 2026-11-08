@@ -87,6 +87,7 @@ const VISITOR_STATUS = Object.freeze({
 });
 
 // M6 - Đặt tiện ích
+const AMENITY_STATUS = Object.freeze({ ACTIVE: 'active', INACTIVE: 'inactive' });
 const BOOKING_STATUS = Object.freeze({
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
@@ -104,6 +105,7 @@ module.exports = {
   TASK_STATUS,
   OPEN_TASK_STATUSES,
   VISITOR_STATUS,
+  AMENITY_STATUS,
   BOOKING_STATUS,
   ROLES,
   DEPARTMENTS,

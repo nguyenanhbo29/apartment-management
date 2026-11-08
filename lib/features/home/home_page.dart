@@ -24,6 +24,9 @@ bool _security(AppUser u) => _staff(u) && u.department == Department.security;
 bool _vehicleViewer(AppUser u) => _security(u) || u.isManager || u.role == UserRole.accountant;
 bool _gateViewer(AppUser u) =>
     _security(u) || u.isManager || (_staff(u) && u.department == Department.reception);
+bool _facility(AppUser u) => _staff(u) && u.department == Department.facility;
+bool _amenityViewer(AppUser u) => u.isResident || u.isManager || _facility(u);
+bool _bookingReviewer(AppUser u) => u.isManager || _facility(u);
 
 /// Danh sách chức năng theo vai trò. Mỗi module thêm mục vào đây khi hoàn thành.
 const _features = <_Feature>[
@@ -46,6 +49,9 @@ const _features = <_Feature>[
   _Feature('Khách của tôi', Icons.person_add_alt, '/visitors', _resident),
   _Feature('Quản lý xe', Icons.local_parking_outlined, '/vehicles/manage', _vehicleViewer),
   _Feature('Khách tại cổng', Icons.door_front_door_outlined, '/visitors/gate', _gateViewer),
+  _Feature('Tiện ích', Icons.pool_outlined, '/amenities', _amenityViewer),
+  _Feature('Lịch đặt của tôi', Icons.event_available_outlined, '/bookings', _resident),
+  _Feature('Duyệt đặt tiện ích', Icons.fact_check_outlined, '/bookings/queue', _bookingReviewer),
 ];
 
 /// Trang chủ: hiển thị chức năng đúng với vai trò người dùng.

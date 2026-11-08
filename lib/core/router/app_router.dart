@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/amenities/presentation/amenity_pages.dart';
+import '../../features/amenities/presentation/booking_pages.dart';
 import '../../features/apartments/presentation/apartment_detail_page.dart';
 import '../../features/apartments/presentation/apartment_form_page.dart';
 import '../../features/apartments/presentation/apartment_list_page.dart';
@@ -78,6 +80,11 @@ final _routeRules = <(RegExp, bool Function(AppUser))>[
     (u) =>
         _staffOf(u, Department.security) || _staffOf(u, Department.reception) || u.isManager,
   ),
+  // M6: /amenities, /amenities/:id mọi vai trò; quản lý tiện ích chỉ Manager
+  (RegExp(r'^/amenities/new$'), _manager),
+  (RegExp(r'^/amenities/[^/]+/edit$'), _manager),
+  (RegExp(r'^/bookings$'), _resident),
+  (RegExp(r'^/bookings/queue$'), (u) => _staffOf(u, Department.facility) || u.isManager),
   // /announcements, /announcements/:id, /notifications: mọi vai trò
 ];
 
@@ -231,6 +238,30 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'new', builder: (_, _) => const VisitorFormPage()),
           GoRoute(path: 'gate', builder: (_, _) => const GateVisitorsPage()),
           GoRoute(path: ':id', builder: (_, s) => VisitorDetailPage(visitorId: id(s))),
+        ],
+      ),
+
+      // M6 - Đặt tiện ích
+      GoRoute(
+        path: '/amenities',
+        builder: (_, _) => const AmenitiesPage(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const AmenityFormPage()),
+          GoRoute(
+            path: ':id',
+            builder: (_, s) => AmenityDetailPage(amenityId: id(s)),
+            routes: [
+              GoRoute(path: 'edit', builder: (_, s) => AmenityFormPage(amenityId: id(s))),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/bookings',
+        builder: (_, _) => const MyBookingsPage(),
+        routes: [
+          GoRoute(path: 'queue', builder: (_, _) => const BookingQueuePage()),
+          GoRoute(path: ':id', builder: (_, s) => BookingDetailPage(bookingId: id(s))),
         ],
       ),
     ],

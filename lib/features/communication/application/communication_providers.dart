@@ -29,6 +29,7 @@ String? routeForNotification(AppNotification n, AppUser user) {
     'service_request' when id != null => '/requests/$id',
     'vehicle' when id != null => '/vehicles/$id',
     'visitor' when id != null => '/visitors/$id',
+    'amenity_booking' when id != null => '/bookings/$id',
     _ => null,
   };
 }

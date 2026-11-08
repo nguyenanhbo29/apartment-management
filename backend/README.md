@@ -105,6 +105,9 @@ Loại notification các module đang dùng (`link.kind` để app mở đúng m
 | `vehicle_approved` / `vehicle_rejected` | `vehicle` | Người đăng ký xe |
 | `vehicle_deactivated` | `vehicle` | Người đăng ký xe (khi Manager ngừng xe) |
 | `visitor_checked_in` / `visitor_checked_out` | `visitor` | Cư dân tạo lịch hẹn |
+| `booking_submitted` | `amenity_booking` | Nhân viên Facility (tiện ích cần duyệt) |
+| `booking_confirmed` / `booking_rejected` | `amenity_booking` | Người đặt (kể cả hết hạn duyệt) |
+| `booking_cancelled_by_staff` | `amenity_booking` | Người đặt (ban quản lý hủy do sự cố) |
 
 ## API vận hành (Người 2)
 
@@ -142,6 +145,24 @@ Cần MongoDB **replica set** (transaction): test tự có; chạy app dùng Atl
 | GET | `/api/visitors/:id` | như trên + cư dân cùng căn, kèm `allowedActions` | UC-17 |
 | PATCH | `/api/visitors/:id/check-in` | staff security (trong khung giờ, cho sớm 30 phút) | UC-17 |
 | PATCH | `/api/visitors/:id/check-out` | staff security | UC-18 |
+
+| GET | `/api/amenities?includeInactive=` | mọi vai trò (tạm ngưng chỉ manager thấy) | UC-35 |
+| POST / PATCH | `/api/amenities`, `/api/amenities/:id` | manager | UC-35 |
+| PATCH | `/api/amenities/:id/deactivate`, `/activate` | manager (chỉ chặn đặt mới) | UC-35 |
+| GET | `/api/amenities/:id/slots?date=YYYY-MM-DD` | mọi vai trò → `[{start,end,used,remaining,available}]` | UC-36 |
+| POST | `/api/amenity-bookings` | resident (`amenityId`, `apartmentId`, `date`, `startTime` HH:mm, `numberOfParticipants`) | UC-37 |
+| GET | `/api/amenity-bookings/mine?status=` | resident (lượt đặt của các căn mình ở) | UC-37 |
+| GET | `/api/amenity-bookings?status=&amenityId=` | staff facility, manager (mặc định `pending`) | UC-38 |
+| GET | `/api/amenity-bookings/:id` | như trên + cư dân cùng căn, kèm `allowedActions`, `cancelDeadline` | UC-38 |
+| PATCH | `/api/amenity-bookings/:id/approve` | staff facility | UC-38 |
+| PATCH | `/api/amenity-bookings/:id/reject` | staff facility (`reason`, trả chỗ) | UC-38 |
+| PATCH | `/api/amenity-bookings/:id/cancel` | người đặt, trước hạn hủy (trả chỗ) | UC-39 |
+| PATCH | `/api/amenity-bookings/:id/cancel-by-staff` | staff facility, manager (`reason`; không áp dụng hạn hủy; lượt chưa kết thúc; trả chỗ) | — |
+
+Đặt tiện ích: giữ chỗ bằng collection `amenityslots` (update có điều kiện trong transaction) nên không
+vượt sức chứa khi nhiều người đặt cùng lúc → 409 `SLOT_FULL`; một căn một lượt/slot → 409
+`BOOKING_DUPLICATE`; quá hạn hủy → 409 `CANCEL_DEADLINE_PASSED`. Booking `pending` cũng giữ chỗ.
+Job mỗi giờ: `confirmed` đã dùng xong → `completed`; `pending` quá giờ → `rejected` (hết hạn duyệt).
 
 Biển số lưu dạng chuẩn hóa (`30A-123.45` → `30A12345`); không có 2 xe `approved` trùng biển
 (partial unique index), trùng trả 409 `VEHICLE_PLATE_DUPLICATE`. Cho Người 1 tính phí xe (UC-20):

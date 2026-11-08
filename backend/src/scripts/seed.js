@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Apartment = require('../models/Apartment');
 const ApartmentResident = require('../models/ApartmentResident');
 const apartmentService = require('../services/apartment.service');
+const Amenity = require('../models/Amenity');
 
 /**
  * Dữ liệu demo. Chạy lại nhiều lần không tạo trùng (tìm theo email / mã căn hộ).
@@ -103,11 +104,63 @@ async function seedResidences(users, apartments) {
   await Promise.all(Object.values(apartments).map((a) => apartmentService.recomputeStatus(a._id)));
 }
 
+// M6: tiện ích mẫu (tìm theo tên)
+const AMENITIES = [
+  {
+    name: 'Hồ bơi',
+    location: 'Tầng 5, khối A',
+    openTime: '06:00',
+    closeTime: '21:00',
+    slotDuration: 60,
+    capacity: 20,
+    rules: 'Mặc đồ bơi, tắm tráng trước khi xuống hồ. Trẻ em dưới 12 tuổi phải có người lớn đi kèm.',
+  },
+  {
+    name: 'Phòng gym',
+    location: 'Tầng 3, khối A',
+    openTime: '05:00',
+    closeTime: '22:00',
+    slotDuration: 60,
+    capacity: 15,
+    rules: 'Mang khăn và giày thể thao. Lau dụng cụ sau khi dùng.',
+  },
+  {
+    name: 'Khu BBQ',
+    location: 'Sân thượng khối B',
+    openTime: '16:00',
+    closeTime: '22:00',
+    slotDuration: 120,
+    capacity: 1,
+    requiresApproval: true,
+    cancelDeadlineHours: 24,
+    rules: 'Mỗi lượt một căn hộ. Dọn dẹp sau khi dùng, không gây ồn sau 22:00.',
+  },
+  {
+    name: 'Phòng sinh hoạt cộng đồng',
+    location: 'Tầng 1, khối B',
+    openTime: '08:00',
+    closeTime: '21:00',
+    slotDuration: 120,
+    capacity: 1,
+    requiresApproval: true,
+    cancelDeadlineHours: 12,
+  },
+];
+
+async function seedAmenities(manager) {
+  for (const data of AMENITIES) {
+    if (await Amenity.exists({ name: data.name })) continue;
+    await Amenity.create({ ...data, createdBy: manager?._id });
+    console.log(`+ tiện ích   ${data.name}`);
+  }
+}
+
 (async () => {
   await connectDb();
   const users = await seedUsers();
   const apartments = await seedApartments();
   await seedResidences(users, apartments);
+  await seedAmenities(Object.values(users).find((u) => u.role === 'manager'));
   console.log('Seed xong.');
   await mongoose.disconnect();
 })().catch(async (err) => {

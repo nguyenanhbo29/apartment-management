@@ -77,6 +77,7 @@ Vì vậy Giai đoạn 0 chỉ còn **bổ sung phần khung mà module vận h�
 | 8 | Có collection `Departments` không? | **✅ Đã chốt 2026-11-08:** giữ enum trên `User.department` (`reception`, `security`, `technical`, `facility`), không tạo collection. UC-40 rút gọn còn "xem nhân viên theo bộ phận + số việc đang mở" |
 | 9 | Nhân viên nghỉ việc biểu diễn thế nào? | **✅ Đã chốt 2026-11-08:** dùng `User.status = inactive` (UC-05 của Người 1). Người 1 gọi `assertNoOpenWork` trước khi khóa tài khoản hoặc đổi vai trò staff (mục 3) |
 | 10 | Cư dân truy cập dữ liệu căn hộ khác trả 403 hay 404? | **✅ Đã chốt 2026-11-08:** truy cập dữ liệu căn hộ khác trả 403 `FORBIDDEN`, giống Người 1. Riêng truy cập theo id (phiếu, booking, xe) trả 404 `NOT_FOUND` |
+| 11 | Tiện ích có sự cố (bảo trì, hỏng) thì lượt đặt đã xác nhận xử lý thế nào? Trước đây chỉ người đặt tự hủy được, "Manager tự xử lý" nhưng không có API | **✅ Đã chốt 2026-11-08:** thêm **"Hủy do sự cố"** (`PATCH /amenity-bookings/:id/cancel-by-staff`) cho Facility và Manager: bắt buộc lý do, không áp dụng hạn hủy, chỉ lượt chưa kết thúc, trả chỗ, báo cư dân. Duyệt / từ chối vẫn **chỉ Facility** |
 
 ---
 
@@ -692,6 +693,13 @@ bookingSchema.index(
 **Thứ tự làm:** model + hàm sinh slot + test → UC-35 → UC-36 → UC-37 + test tranh chấp → UC-38, 39 → job.
 
 **Xong khi:** bắn đồng thời nhiều request vào slot cuối không bao giờ vượt `capacity`; hủy/từ chối trả slot đúng; hạn hủy tính đúng giờ Việt Nam.
+
+**Trạng thái (2026-11-08):** ✅ Code + test xong; chưa chạy thử trên app thật.
+- Backend: `models/Amenity.js`, `AmenitySlot.js`, `AmenityBooking.js`; `services/amenity.service.js` (sinh slot theo giờ VN), `services/amenityBooking.service.js` (giữ chỗ theo mục 8.2, đổi trạng thái + trả chỗ trong cùng transaction); routes `/amenities`, `/amenity-bookings`; job hoàn thành / hết hạn duyệt trong `jobs/index.js`; hook chuyển đi hủy booking tương lai và trả chỗ (thay `TODO(M6)`); seed 4 tiện ích mẫu.
+- Booking **chụp lại `cancelDeadlineHours` lúc đặt** để Manager sửa tiện ích không ảnh hưởng booking cũ.
+- Chỉ nhân viên Facility duyệt / từ chối; Manager xem hàng chờ. Chỉ **người đặt** hủy được (thành viên cùng căn xem được nhưng không hủy).
+- Flutter: `features/amenities/` — Tiện ích (danh sách, Manager thêm / sửa / tạm ngưng), Chi tiết + chọn ngày (14 ngày tới hoặc lịch 30 ngày) + lưới slot + đặt, Lịch đặt của tôi, Duyệt đặt tiện ích, Chi tiết lượt đặt (Duyệt / Từ chối / Hủy kèm hạn hủy).
+- Test: backend 165/165 (M6: 18 test — 8 căn tranh slot còn 3 chỗ → đúng 3 thành công, nhóm nhiều người tranh chỗ cuối, rollback khi đặt trùng, trả chỗ khi hủy / từ chối, quá hạn hủy, chụp quy định, job, hook), Flutter 39/39.
 
 ---
 
