@@ -27,6 +27,8 @@ String? routeForNotification(AppNotification n, AppUser user) {
     'resident_registration' when user.isManager => '/registrations',
     // Module vận hành (Người 2)
     'service_request' when id != null => '/requests/$id',
+    'vehicle' when id != null => '/vehicles/$id',
+    'visitor' when id != null => '/visitors/$id',
     _ => null,
   };
 }

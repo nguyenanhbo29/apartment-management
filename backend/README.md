@@ -101,6 +101,10 @@ Loại notification các module đang dùng (`link.kind` để app mở đúng m
 | `service_request_closed` | `service_request` | Nhân viên được giao |
 | `service_request_reopened` | `service_request` | Nhân viên được giao, Manager |
 | `service_request_auto_closed` | `service_request` | Người tạo phiếu, nhân viên được giao |
+| `vehicle_submitted` | `vehicle` | Bảo vệ |
+| `vehicle_approved` / `vehicle_rejected` | `vehicle` | Người đăng ký xe |
+| `vehicle_deactivated` | `vehicle` | Người đăng ký xe (khi Manager ngừng xe) |
+| `visitor_checked_in` / `visitor_checked_out` | `visitor` | Cư dân tạo lịch hẹn |
 
 ## API vận hành (Người 2)
 
@@ -123,6 +127,26 @@ Cần MongoDB **replica set** (transaction): test tự có; chạy app dùng Atl
 | PATCH | `/api/service-requests/:id/confirm` | người tạo (`rating` 1–5, `feedback?`) | UC-34 |
 | PATCH | `/api/service-requests/:id/reopen` | người tạo (`reason`) | UC-34 |
 | GET | `/api/me/assignments?tab=active\|overdue\|done` | staff | UC-31 |
+
+| POST | `/api/vehicles` (multipart, ảnh tùy chọn) | resident đang ở căn `apartmentId` | UC-13 |
+| GET | `/api/vehicles/mine?status=` | resident (xe các căn mình ở) | UC-15 |
+| GET | `/api/vehicles?status=&plate=&type=&apartmentId=` | staff security, manager, accountant | UC-15 |
+| GET | `/api/vehicles/:id` | như trên + cư dân cùng căn, kèm `allowedActions` | UC-15 |
+| PATCH | `/api/vehicles/:id/approve` | staff security | UC-14 |
+| PATCH | `/api/vehicles/:id/reject` | staff security (`reason`) | UC-14 |
+| PATCH | `/api/vehicles/:id/deactivate` | resident (xe căn mình), manager | — |
+| POST | `/api/visitors` | resident (`visitDate` YYYY-MM-DD, `timeFrom`/`timeTo` HH:mm giờ VN) | UC-16 |
+| GET | `/api/visitors/mine?status=` | resident | UC-16 |
+| PATCH | `/api/visitors/:id/cancel` | resident (lịch `expected` của căn mình) | UC-16 |
+| GET | `/api/visitors?date=&code=&phone=&status=` | staff security/reception, manager (mặc định hôm nay) | UC-17 |
+| GET | `/api/visitors/:id` | như trên + cư dân cùng căn, kèm `allowedActions` | UC-17 |
+| PATCH | `/api/visitors/:id/check-in` | staff security (trong khung giờ, cho sớm 30 phút) | UC-17 |
+| PATCH | `/api/visitors/:id/check-out` | staff security | UC-18 |
+
+Biển số lưu dạng chuẩn hóa (`30A-123.45` → `30A12345`); không có 2 xe `approved` trùng biển
+(partial unique index), trùng trả 409 `VEHICLE_PLATE_DUPLICATE`. Cho Người 1 tính phí xe (UC-20):
+`require('./services/vehicle.service').getBillableVehicles(apartmentId)` → xe `approved` của căn.
+Khách ngoài khung giờ: 409 `VISITOR_OUT_OF_WINDOW`; quá giờ chưa đến: cờ `isOverdue`.
 
 \* Manager: mọi phiếu. Staff: phiếu đang giao cho mình. Resident: phiếu mình tạo + phiếu sửa chữa của
 căn mình đang ở. Ngoài phạm vi trả 404. Sai trạng thái trả 409 `INVALID_STATE`.

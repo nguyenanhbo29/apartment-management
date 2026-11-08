@@ -20,5 +20,8 @@ router.use('/staff', require('./staff.routes'));
 // M5 - Phiếu yêu cầu / phản ánh (UC-27 → 34)
 router.use('/service-requests', require('./serviceRequest.routes'));
 router.use('/me', require('./me.routes'));
+// M3 - Xe và khách (UC-13 → 18)
+router.use('/vehicles', require('./vehicle.routes'));
+router.use('/visitors', require('./visitor.routes'));
 
 module.exports = router;

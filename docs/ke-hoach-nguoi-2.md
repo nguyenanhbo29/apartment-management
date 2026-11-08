@@ -571,6 +571,13 @@ Index: `{ visitDate: 1, status: 1 }`, `{ apartmentId: 1, visitDate: -1 }`; `appo
 
 **Xong khi:** chặn được trùng biển số kể cả khi nhập khác định dạng; check-in hai lần chỉ thành công một lần; Người 1 lấy được danh sách xe tính phí.
 
+**Trạng thái (2026-11-08):** ✅ Code + test xong; chưa chạy thử trên app thật.
+- Backend: `services/vehicle.service.js` (biển số lưu dạng chuẩn hóa, bắt E11000 khi duyệt → `VEHICLE_PLATE_DUPLICATE`, `getBillableVehicles` cho Người 1), `models/Visitor.js`, `services/visitor.service.js` (giờ VN qua `shared/time`, cho đến sớm 30 phút), routes `/vehicles`, `/visitors`. Chi tiết xe / lịch hẹn trả `allowedActions`.
+- Thêm trường `imageUrl` vào `Vehicle` (schema dùng chung, chỉ thêm).
+- Phân quyền chốt thêm: Manager **không** duyệt xe (chỉ Bảo vệ), nhưng được ngừng xe; Kế toán xem danh sách xe (đối soát phí); Lễ tân + Manager xem khách tại cổng nhưng chỉ Bảo vệ check-in/out.
+- Flutter: `features/vehicles/` (Xe của tôi, Đăng ký xe, Quản lý xe + tra biển số, Chi tiết + Duyệt/Từ chối/Ngừng), `features/visitors/` (Khách của tôi, Đăng ký khách → hiện mã hẹn, Khách tại cổng với nút Check-in/Check-out ngay trên dòng, Chi tiết). Chuyển `ImagePickerField`, `NetworkImageStrip`, `reasonDialog` sang `core/widgets/media_widgets.dart` để dùng chung.
+- Test: backend 147/147 (M3: 25 test — trùng biển khác định dạng, duyệt đồng thời, xe inactive đăng ký lại, check-in đồng thời, khung giờ, hook chuyển đi), Flutter 35/35.
+
 ---
 
 ## 8. Giai đoạn 4: M6 — Đặt tiện ích (UC-35 → 39)

@@ -21,6 +21,8 @@ const vehicleSchema = new mongoose.Schema(
     reviewedAt: Date,
     // Thời điểm ngừng sử dụng (cư dân hủy, Manager vô hiệu, hoặc căn hộ không còn người ở)
     deactivatedAt: Date,
+    // Ảnh xe / cà vẹt (Người 2, M3) — đường dẫn '/uploads/vehicles/...'
+    imageUrl: String,
   },
   { timestamps: true }
 );

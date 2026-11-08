@@ -31,12 +31,15 @@ import '../../features/staff/presentation/staff_list_page.dart';
 import '../../features/users/presentation/user_detail_page.dart';
 import '../../features/users/presentation/user_form_page.dart';
 import '../../features/users/presentation/user_list_page.dart';
+import '../../features/vehicles/presentation/vehicle_pages.dart';
+import '../../features/visitors/presentation/visitor_pages.dart';
 
 const _publicRoutes = {'/login', '/forgot-password'};
 
 bool _manager(AppUser u) => u.isManager;
 bool _residentViewer(AppUser u) => u.canViewResidents;
 bool _resident(AppUser u) => u.isResident;
+bool _staffOf(AppUser u, Department d) => u.role == UserRole.staff && u.department == d;
 
 /// Luật phân quyền route: luật khớp ĐẦU TIÊN quyết định. Đặt luật cụ thể lên trước.
 /// Backend vẫn kiểm tra quyền trên mọi API; đây chỉ để không mở màn hình sai vai trò.
@@ -61,6 +64,20 @@ final _routeRules = <(RegExp, bool Function(AppUser))>[
   (RegExp(r'^/requests/queue$'), _manager),
   (RegExp(r'^/requests/[^/]+/assign$'), _manager),
   (RegExp(r'^/assignments'), (u) => u.role == UserRole.staff),
+  // M3: /vehicles, /visitors = của tôi (Resident); /:id mọi vai trò (backend lọc phạm vi)
+  (RegExp(r'^/vehicles$'), _resident),
+  (RegExp(r'^/vehicles/new$'), _resident),
+  (
+    RegExp(r'^/vehicles/manage$'),
+    (u) => _staffOf(u, Department.security) || u.isManager || u.role == UserRole.accountant,
+  ),
+  (RegExp(r'^/visitors$'), _resident),
+  (RegExp(r'^/visitors/new$'), _resident),
+  (
+    RegExp(r'^/visitors/gate$'),
+    (u) =>
+        _staffOf(u, Department.security) || _staffOf(u, Department.reception) || u.isManager,
+  ),
   // /announcements, /announcements/:id, /notifications: mọi vai trò
 ];
 
@@ -196,6 +213,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: '/assignments', builder: (_, _) => const MyAssignmentsPage()),
+
+      // M3 - Xe và khách
+      GoRoute(
+        path: '/vehicles',
+        builder: (_, _) => const MyVehiclesPage(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const VehicleFormPage()),
+          GoRoute(path: 'manage', builder: (_, _) => const VehiclesManagePage()),
+          GoRoute(path: ':id', builder: (_, s) => VehicleDetailPage(vehicleId: id(s))),
+        ],
+      ),
+      GoRoute(
+        path: '/visitors',
+        builder: (_, _) => const MyVisitorsPage(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const VisitorFormPage()),
+          GoRoute(path: 'gate', builder: (_, _) => const GateVisitorsPage()),
+          GoRoute(path: ':id', builder: (_, s) => VisitorDetailPage(visitorId: id(s))),
+        ],
+      ),
     ],
   );
 
