@@ -1,3 +1,5 @@
+const path = require('path');
+
 require('dotenv').config({ quiet: true });
 
 module.exports = {
@@ -6,6 +8,8 @@ module.exports = {
   mongoUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/apartment_management',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  // Thư mục lưu ảnh upload (phiếu, xe...), phục vụ tĩnh tại /uploads
+  uploadDir: path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads')),
   mail: {
     // console: in OTP ra console và trả về trong response (chỉ dùng để dev/demo)
     // smtp:    gửi email thật qua SMTP (vd Gmail + App Password)

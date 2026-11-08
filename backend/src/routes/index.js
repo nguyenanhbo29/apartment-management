@@ -15,4 +15,21 @@ router.use('/residents', require('./resident.routes'));
 router.use('/announcements', require('./announcement.routes'));
 router.use('/notifications', require('./notification.routes'));
 
+// Module vận hành (Người 2) - UC-40 nhân viên theo bộ phận
+router.use('/staff', require('./staff.routes'));
+// M5 - Phiếu yêu cầu / phản ánh (UC-27 → 34)
+router.use('/service-requests', require('./serviceRequest.routes'));
+router.use('/me', require('./me.routes'));
+// M3 - Xe và khách (UC-13 → 18)
+router.use('/vehicles', require('./vehicle.routes'));
+router.use('/visitors', require('./visitor.routes'));
+// M6 - Đặt tiện ích (UC-35 → 39)
+router.use('/amenities', require('./amenity.routes').amenities);
+router.use('/amenity-bookings', require('./amenity.routes').bookings);
+// M7 - Nhiệm vụ vận hành (UC-41, 42)
+router.use('/tasks', require('./operationalTask.routes'));
+// M9 - Dashboard vận hành (UC-47), báo cáo hiệu suất nhân viên (UC-48)
+router.use('/dashboard', require('./report.routes').dashboard);
+router.use('/reports', require('./report.routes').reports);
+
 module.exports = router;

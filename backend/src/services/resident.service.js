@@ -5,6 +5,7 @@ const { AppError, ERROR_CODES } = require('../utils/errors');
 const { ROLES, USER_STATUS, RESIDENT_RELATION, RESIDENT_STATUS } = require('../utils/constants');
 const apartmentService = require('./apartment.service');
 const { notifyUsers } = require('./notify.service');
+const { onResidentMovedOut } = require('./operationsHooks');
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const RELATION_LABEL = { owner: 'chủ hộ', member: 'thành viên', tenant: 'người thuê' };
@@ -317,6 +318,8 @@ async function moveOut(id, { moveOutDate, reason }) {
 
   if (wasPayer) await ensureDefaultPayer(rec.apartmentId);
   await apartmentService.recomputeStatus(rec.apartmentId);
+  // Dọn xe, lịch khách, booking của module vận hành (không ném lỗi)
+  if (rec.userId) await onResidentMovedOut(rec.apartmentId, rec.userId);
   return rec;
 }
 

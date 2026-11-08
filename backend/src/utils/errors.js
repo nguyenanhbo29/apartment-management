@@ -9,6 +9,19 @@ const ERROR_CODES = Object.freeze({
   NOT_FOUND: { status: 404, code: 'NOT_FOUND' },
   CONFLICT: { status: 409, code: 'CONFLICT' },
   INTERNAL: { status: 500, code: 'INTERNAL_ERROR' },
+
+  // Module vận hành (Người 2)
+  NOT_APARTMENT_RESIDENT: { status: 403, code: 'NOT_APARTMENT_RESIDENT' },
+  INVALID_FILE: { status: 400, code: 'INVALID_FILE' },
+  ASSIGNEE_INVALID: { status: 409, code: 'ASSIGNEE_INVALID' },
+  HAS_OPEN_WORK: { status: 409, code: 'HAS_OPEN_WORK' },
+  // Sai trạng thái: dùng chung cho mọi máy trạng thái (phiếu, xe, khách, booking, nhiệm vụ)
+  INVALID_STATE: { status: 409, code: 'INVALID_STATE' },
+  VEHICLE_PLATE_DUPLICATE: { status: 409, code: 'VEHICLE_PLATE_DUPLICATE' },
+  VISITOR_OUT_OF_WINDOW: { status: 409, code: 'VISITOR_OUT_OF_WINDOW' },
+  SLOT_FULL: { status: 409, code: 'SLOT_FULL' },
+  BOOKING_DUPLICATE: { status: 409, code: 'BOOKING_DUPLICATE' },
+  CANCEL_DEADLINE_PASSED: { status: 409, code: 'CANCEL_DEADLINE_PASSED' },
 });
 
 class AppError extends Error {

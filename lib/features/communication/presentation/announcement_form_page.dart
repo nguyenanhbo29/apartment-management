@@ -307,7 +307,7 @@ class _ApartmentPickerState extends ConsumerState<_ApartmentPicker> {
                 _debounce?.cancel();
                 _debounce = Timer(
                   const Duration(milliseconds: 400),
-                  () => setState(() => _future = _search(q)),
+                  () => setState(() { _future = _search(q); }),
                 );
               },
             ),

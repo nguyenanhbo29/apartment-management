@@ -25,6 +25,12 @@ String? routeForNotification(AppNotification n, AppUser user) {
     'announcement' when id != null => '/announcements/$id',
     'apartment' when id != null => '/apartments/$id',
     'resident_registration' when user.isManager => '/registrations',
+    // Module vận hành (Người 2)
+    'service_request' when id != null => '/requests/$id',
+    'vehicle' when id != null => '/vehicles/$id',
+    'visitor' when id != null => '/visitors/$id',
+    'amenity_booking' when id != null => '/bookings/$id',
+    'task' when id != null => '/tasks/$id',
     _ => null,
   };
 }
