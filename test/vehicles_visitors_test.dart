@@ -98,6 +98,8 @@ void main() {
     expect(plateRegex.hasMatch(normalizePlate('ABC-1234')), isFalse);
     expect(formatPlate('30A12345'), '30A-123.45');
     expect(formatPlate('29B1234'), '29B-1234');
+    expect(formatPlate('29H155555'), '29H1-555.55');
+    expect(formatPlate('51AB12345'), '51AB-123.45');
   });
 
   test('M3: luật route theo vai trò', () {

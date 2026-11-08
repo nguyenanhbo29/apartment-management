@@ -58,6 +58,7 @@ Map<String, dynamic> _row(
   int completed = 0,
   double? onTimeRate,
   double? rating,
+  int transferredAway = 0,
 }) => {
   'staff': {
     '_id': name,
@@ -66,6 +67,7 @@ Map<String, dynamic> _row(
     'status': 'active',
   },
   'assigned': completed,
+  'transferredAway': transferredAway,
   'completed': completed,
   'onTime': 0,
   'onTimeRate': onTimeRate,
@@ -169,7 +171,7 @@ void main() {
                 },
                 'items': [
                   _row('An', completed: 3, onTimeRate: 0.5, rating: 4.5),
-                  _row('Bình', completed: 1, onTimeRate: 1),
+                  _row('Bình', completed: 1, onTimeRate: 1, transferredAway: 7),
                   _row('Cường'),
                 ],
               })
@@ -178,9 +180,18 @@ void main() {
 
       expect(find.text('75%'), findsOneWidget); // tổng đúng hạn
       expect(find.text('4.5 ★'), findsOneWidget);
+      // Cột mới: việc bị chuyển sang người khác
+      expect(find.text('Bị chuyển đi'), findsOneWidget);
+      expect(find.text('7'), findsOneWidget);
       // Cường chưa có việc: "—" chứ không phải 0%
       expect(find.text('0%'), findsNothing);
       expect(find.text('—'), findsWidgets);
+
+      // Mặc định: Hoàn thành giảm dần (An 3 > Bình 1), không phải theo cột khác
+      expect(
+        tester.getTopLeft(find.text('An')).dy,
+        lessThan(tester.getTopLeft(find.text('Bình')).dy),
+      );
 
       // Sắp theo "Đúng hạn" tăng dần: null luôn xuống cuối
       // "Đúng hạn" có cả ở thẻ tổng -> chỉ bấm tiêu đề cột trong bảng

@@ -50,6 +50,8 @@ const serviceRequestSchema = new mongoose.Schema(
 
     // Kết thúc
     rejectReason: String,
+    cancelledAt: Date,
+    cancelReason: String,
     closedAt: Date,
     autoClosed: { type: Boolean, default: false },
     rating: { type: Number, min: 1, max: 5 },

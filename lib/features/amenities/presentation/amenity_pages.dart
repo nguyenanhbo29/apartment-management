@@ -6,6 +6,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/common.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../../core/widgets/unsaved_changes_guard.dart';
 import '../../apartments/application/apartments_providers.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/amenities_repository.dart';
@@ -173,7 +174,10 @@ class _AmenityDetailPageState extends ConsumerState<AmenityDetailPage> {
             16,
             16,
             16,
-            MediaQuery.of(ctx).viewInsets.bottom + 16,
+            // Chừa thanh điều hướng hệ thống (gesture bar) và bàn phím
+            MediaQuery.of(ctx).viewInsets.bottom +
+                MediaQuery.of(ctx).viewPadding.bottom +
+                16,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -230,6 +234,18 @@ class _AmenityDetailPageState extends ConsumerState<AmenityDetailPage> {
                     : 'Hủy trước giờ bắt đầu ${a.cancelDeadlineHours} tiếng.',
                 style: Theme.of(ctx).textTheme.bodySmall,
               ),
+              // Đặt sát giờ: hạn hủy đã qua ngay lúc đặt -> báo trước
+              if (DateTime.now().isAfter(
+                slot.start.subtract(Duration(hours: a.cancelDeadlineHours)),
+              ))
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Đã quá hạn hủy: đặt rồi sẽ không tự hủy được.',
+                    style: Theme.of(ctx).textTheme.bodySmall
+                        ?.copyWith(color: Theme.of(ctx).colorScheme.error),
+                  ),
+                ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => Navigator.pop(ctx, true),
@@ -504,6 +520,8 @@ class _AmenityFormPageState extends ConsumerState<AmenityFormPage> {
   int _slotDuration = 60;
   bool _requiresApproval = false;
   bool _loaded = false;
+  // Người dùng đã sửa gì chưa (form sửa đã điền sẵn nên không so được với "trống")
+  bool _dirty = false;
   bool _saving = false;
 
   bool get _isEdit => widget.amenityId != null;
@@ -551,7 +569,12 @@ class _AmenityFormPageState extends ConsumerState<AmenityFormPage> {
       context: context,
       initialTime: open ? _open : _close,
     );
-    if (t != null) setState(() => open ? _open = t : _close = t);
+    if (t != null) {
+      setState(() {
+        open ? _open = t : _close = t;
+        _dirty = true;
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -594,6 +617,8 @@ class _AmenityFormPageState extends ConsumerState<AmenityFormPage> {
 
   Widget _form() => Form(
     key: _formKey,
+    // Mọi ô nhập / dropdown đổi giá trị -> đánh dấu đã sửa
+    onChanged: () => _dirty = true,
     child: ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -662,7 +687,10 @@ class _AmenityFormPageState extends ConsumerState<AmenityFormPage> {
           contentPadding: EdgeInsets.zero,
           title: const Text('Cần nhân viên tiện ích duyệt'),
           value: _requiresApproval,
-          onChanged: (v) => setState(() => _requiresApproval = v),
+          onChanged: (v) => setState(() {
+            _requiresApproval = v;
+            _dirty = true;
+          }),
         ),
         TextFormField(
           controller: _description,
@@ -683,21 +711,24 @@ class _AmenityFormPageState extends ConsumerState<AmenityFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? 'Sửa tiện ích' : 'Thêm tiện ích')),
-      body: !_isEdit
-          ? _form()
-          : ref
-                .watch(amenityDetailProvider(widget.amenityId!))
-                .when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => ErrorView(error: e),
-                  data: (a) {
-                    _fill(a);
-                    return _form();
-                  },
-                ),
+    return UnsavedChangesGuard(
+      isDirty: () => _dirty,
+      child: Scaffold(
+        appBar: AppBar(title: Text(_isEdit ? 'Sửa tiện ích' : 'Thêm tiện ích')),
+        body: !_isEdit
+            ? _form()
+            : ref
+                  .watch(amenityDetailProvider(widget.amenityId!))
+                  .when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => ErrorView(error: e),
+                    data: (a) {
+                      _fill(a);
+                      return _form();
+                    },
+                  ),
+      ),
     );
   }
 }

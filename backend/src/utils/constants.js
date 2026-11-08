@@ -47,6 +47,13 @@ const REQUEST_CATEGORY = Object.freeze({
   SERVICE: 'service',
   OTHER: 'other',
 });
+// Danh mục hợp lệ theo loại phiếu (chốt 2026-11-08). Thang máy, vệ sinh, khác dùng cho cả hai.
+// Flutter có bảng giống hệt: lib/features/service_requests/data/models.dart
+const C = REQUEST_CATEGORY;
+const REQUEST_CATEGORIES_BY_TYPE = Object.freeze({
+  [REQUEST_TYPE.REPAIR]: Object.freeze([C.ELECTRIC, C.PLUMBING, C.INTERNET, C.ELEVATOR, C.HYGIENE, C.OTHER]),
+  [REQUEST_TYPE.COMPLAINT]: Object.freeze([C.ELEVATOR, C.HYGIENE, C.NOISE, C.SECURITY, C.SERVICE, C.OTHER]),
+});
 const REQUEST_PRIORITY = Object.freeze({
   LOW: 'low',
   NORMAL: 'normal',
@@ -61,6 +68,8 @@ const REQUEST_STATUS = Object.freeze({
   WAITING_CONFIRMATION: 'waiting_confirmation',
   REOPENED: 'reopened',
   CLOSED: 'closed',
+  // Cư dân tự rút phiếu khi chưa bắt đầu xử lý (pending / assigned)
+  CANCELLED: 'cancelled',
 });
 // Phiếu đang nằm trong tay nhân viên
 const OPEN_REQUEST_STATUSES = Object.freeze([
@@ -106,6 +115,7 @@ const BOOKING_STATUS = Object.freeze({
 module.exports = {
   REQUEST_TYPE,
   REQUEST_CATEGORY,
+  REQUEST_CATEGORIES_BY_TYPE,
   REQUEST_PRIORITY,
   REQUEST_STATUS,
   OPEN_REQUEST_STATUSES,

@@ -13,6 +13,7 @@ const {
   OPEN_REQUEST_STATUSES,
   OPEN_TASK_STATUSES,
   REQUEST_STATUS,
+  TASK_STATUS,
   VEHICLE_STATUS,
   VISITOR_STATUS,
 } = require('../utils/constants');
@@ -82,7 +83,8 @@ async function operationsDashboard(query) {
     Apartment.countDocuments({}),
     Apartment.countDocuments({ status: APARTMENT_STATUS.OCCUPIED }),
     countBy(ServiceRequest, {}),
-    ServiceRequest.countDocuments({ createdAt: inRange }),
+    // Phiếu cư dân tự rút không tính là phiếu mới
+    ServiceRequest.countDocuments({ createdAt: inRange, status: { $ne: REQUEST_STATUS.CANCELLED } }),
     ServiceRequest.countDocuments({ status: { $in: [...OPEN_REQUEST_STATUSES] }, deadline: { $lt: now } }),
     countBy(OperationalTask, {}),
     OperationalTask.countDocuments({ createdAt: inRange }),
@@ -135,7 +137,9 @@ async function operationsDashboard(query) {
 // ======================================================================== UC-48
 /**
  * Mỗi nhân viên:
- * - assigned: số lần được giao trong khoảng (phiếu: assign/reassign; nhiệm vụ: created/reassign).
+ * - assigned: số VIỆC được giao trong khoảng mà người đó vẫn giữ hoặc đã làm xong
+ *   (phiếu: assign/reassign; nhiệm vụ: created/reassign). Việc đã hủy / cư dân rút: không tính.
+ * - transferredAway: số việc được giao trong khoảng nhưng sau đó chuyển sang người khác.
  * - completed: phiếu tính lần ĐẦU báo xong (finish đầu tiên), nhiệm vụ tính lúc complete.
  * - onTimeRate: hoàn thành trước hạn / tổng hoàn thành. Tính theo lúc NHÂN VIÊN báo xong,
  *   không theo lúc cư dân nghiệm thu (closedAt) — tránh trừ điểm vì cư dân chậm.
@@ -153,20 +157,59 @@ async function staffPerformance(query) {
   const stats = new Map(
     staff.map((s) => [
       String(s._id),
-      { assigned: 0, completed: 0, onTime: 0, handlingHours: [], ratingSum: 0, ratingCount: 0, reopenCount: 0 },
+      {
+        assigned: 0,
+        transferredAway: 0,
+        completed: 0,
+        onTime: 0,
+        handlingHours: [],
+        ratingSum: 0,
+        ratingCount: 0,
+        reopenCount: 0,
+      },
     ])
   );
   const forStaff = (id) => (id ? stats.get(String(id)) : undefined);
 
-  // --- Giao việc trong khoảng
+  // --- Giao việc trong khoảng (đếm theo việc, không theo số lần giao)
+  // Mỗi (nhân viên, việc) được giao trong khoảng:
+  //   - sau đó việc đã chuyển sang người khác -> transferredAway
+  //   - việc đã hủy / cư dân rút -> không tính cho ai (không phải lỗi hay công của nhân viên)
+  //   - còn lại (đang giữ hoặc đã xong) -> assigned
+  const ASSIGN_ACTIONS = ['assign', 'reassign', 'created'];
   const assignEvents = await RequestHistory.find({
-    action: { $in: ['assign', 'reassign', 'created'] },
+    action: { $in: ASSIGN_ACTIONS },
     assignedStaffId: { $ne: null },
     createdAt: inRange,
-  }).select('assignedStaffId');
+  }).select('requestId taskId assignedStaffId');
+  const itemKey = (h) => String(h.requestId || h.taskId);
+  const reqIds = [...new Set(assignEvents.filter((e) => e.requestId).map((e) => String(e.requestId)))];
+  const tskIds = [...new Set(assignEvents.filter((e) => e.taskId).map((e) => String(e.taskId)))];
+  const [itemAssignHistory, cancelledReqs, cancelledTasks] = await Promise.all([
+    RequestHistory.find({
+      $or: [{ requestId: { $in: reqIds } }, { taskId: { $in: tskIds } }],
+      action: { $in: ASSIGN_ACTIONS },
+      assignedStaffId: { $ne: null },
+    })
+      .sort({ createdAt: 1, _id: 1 })
+      .select('requestId taskId assignedStaffId'),
+    ServiceRequest.find({ _id: { $in: reqIds }, status: REQUEST_STATUS.CANCELLED }).distinct('_id'),
+    OperationalTask.find({ _id: { $in: tskIds }, status: TASK_STATUS.CANCELLED }).distinct('_id'),
+  ]);
+  const cancelled = new Set([...cancelledReqs, ...cancelledTasks].map(String));
+  // Người được giao cuối cùng của mỗi việc
+  const lastAssignee = new Map();
+  for (const h of itemAssignHistory) lastAssignee.set(itemKey(h), String(h.assignedStaffId));
+
+  const counted = new Set();
   for (const e of assignEvents) {
+    const key = `${e.assignedStaffId}|${itemKey(e)}`;
+    if (counted.has(key) || cancelled.has(itemKey(e))) continue;
+    counted.add(key);
     const s = forStaff(e.assignedStaffId);
-    if (s) s.assigned += 1;
+    if (!s) continue;
+    if (lastAssignee.get(itemKey(e)) === String(e.assignedStaffId)) s.assigned += 1;
+    else s.transferredAway += 1;
   }
 
   // --- Hoàn thành: phiếu (lần finish đầu tiên) + nhiệm vụ (complete)
@@ -259,6 +302,7 @@ async function staffPerformance(query) {
       return {
         staff: { _id: u._id, fullName: u.fullName, department: u.department, status: u.status },
         assigned: s.assigned,
+        transferredAway: s.transferredAway,
         completed: s.completed,
         onTime: s.onTime,
         onTimeRate: ratio(s.onTime, s.completed),
@@ -273,11 +317,12 @@ async function staffPerformance(query) {
   const totals = items.reduce(
     (t, i) => ({
       assigned: t.assigned + i.assigned,
+      transferredAway: t.transferredAway + i.transferredAway,
       completed: t.completed + i.completed,
       onTime: t.onTime + i.onTime,
       reopenCount: t.reopenCount + i.reopenCount,
     }),
-    { assigned: 0, completed: 0, onTime: 0, reopenCount: 0 }
+    { assigned: 0, transferredAway: 0, completed: 0, onTime: 0, reopenCount: 0 }
   );
   return {
     range: { from: range.from, to: range.to },

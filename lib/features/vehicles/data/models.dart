@@ -31,15 +31,22 @@ String normalizePlate(String raw) =>
 
 final plateRegex = RegExp(r'^[0-9]{2}[A-Z]{1,2}[0-9]{4,6}$');
 
-/// Hiển thị dễ đọc: '30A12345' -> '30A-123.45', '29B1234' -> '29B-1234'.
+/// Hiển thị dễ đọc: '30A12345' -> '30A-123.45', '29B1234' -> '29B-1234',
+/// xe máy seri chữ + số: '29H155555' -> '29H1-555.55'.
 String formatPlate(String plate) {
   final m = RegExp(r'^(\d{2}[A-Z]{1,2})(\d+)$').firstMatch(plate);
   if (m == null) return plate;
-  final digits = m.group(2)!;
+  var series = m.group(1)!;
+  var digits = m.group(2)!;
+  // 1 chữ cái + 6 số: số đầu thuộc seri xe máy (29-H1 555.55)
+  if (series.length == 3 && digits.length == 6) {
+    series += digits[0];
+    digits = digits.substring(1);
+  }
   final tail = digits.length == 5
       ? '${digits.substring(0, 3)}.${digits.substring(3)}'
       : digits;
-  return '${m.group(1)}-$tail';
+  return '$series-$tail';
 }
 
 class Vehicle {

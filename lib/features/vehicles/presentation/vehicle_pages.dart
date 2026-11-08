@@ -11,6 +11,7 @@ import '../../../core/widgets/common.dart';
 import '../../../core/widgets/media_widgets.dart';
 import '../../../core/widgets/paged_list_view.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../../core/widgets/unsaved_changes_guard.dart';
 import '../../apartments/application/apartments_providers.dart';
 import '../../apartments/data/models.dart';
 import '../data/models.dart';
@@ -153,99 +154,111 @@ class _VehicleFormPageState extends ConsumerState<VehicleFormPage> {
   @override
   Widget build(BuildContext context) {
     final apartments = ref.watch(myApartmentsProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Đăng ký xe')),
-      body: apartments.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorView(
-          error: e,
-          onRetry: () => ref.invalidate(myApartmentsProvider),
-        ),
-        data: (list) => list.isEmpty
-            ? const Center(
-                child: Text('Bạn chưa được ghi nhận cư trú tại căn hộ nào.'),
-              )
-            : Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    SegmentedButton<VehicleType>(
-                      segments: [
-                        for (final t in VehicleType.values)
-                          ButtonSegment(
-                            value: t,
-                            label: Text(t.label),
-                            icon: Icon(
-                              t == VehicleType.car
-                                  ? Icons.directions_car_outlined
-                                  : Icons.two_wheeler_outlined,
+    return UnsavedChangesGuard(
+      isDirty: () =>
+          _plate.text.trim().isNotEmpty ||
+          _brand.text.trim().isNotEmpty ||
+          _color.text.trim().isNotEmpty ||
+          _image != null,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Đăng ký xe')),
+        body: apartments.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorView(
+            error: e,
+            onRetry: () => ref.invalidate(myApartmentsProvider),
+          ),
+          data: (list) => list.isEmpty
+              ? const Center(
+                  child: Text('Bạn chưa được ghi nhận cư trú tại căn hộ nào.'),
+                )
+              : Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      SegmentedButton<VehicleType>(
+                        segments: [
+                          for (final t in VehicleType.values)
+                            ButtonSegment(
+                              value: t,
+                              label: Text(t.label),
+                              icon: Icon(
+                                t == VehicleType.car
+                                    ? Icons.directions_car_outlined
+                                    : Icons.two_wheeler_outlined,
+                              ),
                             ),
-                          ),
-                      ],
-                      selected: {_type},
-                      onSelectionChanged: (s) =>
-                          setState(() => _type = s.first),
-                    ),
-                    const SizedBox(height: 16),
-                    if (list.length > 1) ...[
-                      DropdownButtonFormField<String>(
-                        initialValue: _apartmentId,
-                        decoration: const InputDecoration(labelText: 'Căn hộ'),
-                        items: [
-                          for (final a in list)
-                            DropdownMenuItem(value: a.id, child: Text(a.code)),
                         ],
-                        validator: (v) => v == null ? 'Chọn căn hộ' : null,
-                        onChanged: (v) => setState(() => _apartmentId = v),
+                        selected: {_type},
+                        onSelectionChanged: (s) =>
+                            setState(() => _type = s.first),
                       ),
                       const SizedBox(height: 16),
+                      if (list.length > 1) ...[
+                        DropdownButtonFormField<String>(
+                          initialValue: _apartmentId,
+                          decoration: const InputDecoration(
+                            labelText: 'Căn hộ',
+                          ),
+                          items: [
+                            for (final a in list)
+                              DropdownMenuItem(
+                                value: a.id,
+                                child: Text(a.code),
+                              ),
+                          ],
+                          validator: (v) => v == null ? 'Chọn căn hộ' : null,
+                          onChanged: (v) => setState(() => _apartmentId = v),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      TextFormField(
+                        controller: _plate,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(
+                          labelText: 'Biển số',
+                          hintText: 'VD: 30A-123.45',
+                        ),
+                        validator: (v) =>
+                            plateRegex.hasMatch(normalizePlate(v ?? ''))
+                            ? null
+                            : 'Biển số không đúng định dạng',
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _brand,
+                        decoration: const InputDecoration(
+                          labelText: 'Hãng xe (không bắt buộc)',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _color,
+                        decoration: const InputDecoration(
+                          labelText: 'Màu xe (không bắt buộc)',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Ảnh xe / cà vẹt',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      ImagePickerField(
+                        max: 1,
+                        onChanged: (f) => _image = f.firstOrNull,
+                      ),
+                      const SizedBox(height: 24),
+                      LoadingButton(
+                        loading: _saving,
+                        onPressed: () => _submit(list),
+                        label: 'Gửi đăng ký',
+                      ),
                     ],
-                    TextFormField(
-                      controller: _plate,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Biển số',
-                        hintText: 'VD: 30A-123.45',
-                      ),
-                      validator: (v) =>
-                          plateRegex.hasMatch(normalizePlate(v ?? ''))
-                          ? null
-                          : 'Biển số không đúng định dạng',
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _brand,
-                      decoration: const InputDecoration(
-                        labelText: 'Hãng xe (không bắt buộc)',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _color,
-                      decoration: const InputDecoration(
-                        labelText: 'Màu xe (không bắt buộc)',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Ảnh xe / cà vẹt',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    ImagePickerField(
-                      max: 1,
-                      onChanged: (f) => _image = f.firstOrNull,
-                    ),
-                    const SizedBox(height: 24),
-                    LoadingButton(
-                      loading: _saving,
-                      onPressed: () => _submit(list),
-                      label: 'Gửi đăng ký',
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }
@@ -278,7 +291,11 @@ class _VehiclesManagePageState extends ConsumerState<VehiclesManagePage> {
     _debounce?.cancel();
     _debounce = Timer(
       const Duration(milliseconds: 400),
-      () => setState(() => _plate = q.trim()),
+      () => setState(() {
+        _plate = q.trim();
+        // Tra biển số ở cổng: tìm trên mọi trạng thái, không chỉ tab đang chọn
+        if (_plate.isNotEmpty) _status = null;
+      }),
     );
   }
 
@@ -312,7 +329,7 @@ class _VehiclesManagePageState extends ConsumerState<VehiclesManagePage> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               children: [
-                for (final s in <VehicleStatus?>[...VehicleStatus.values, null])
+                for (final s in <VehicleStatus?>[null, ...VehicleStatus.values])
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(

@@ -129,6 +129,7 @@ void main() {
 
     // Điền đủ rồi gửi (một căn hộ -> không cần chọn)
     await tester.tap(find.text('Phản ánh'));
+    await tester.pumpAndSettle(); // dropdown dựng lại theo loại mới
     await tester.tap(find.text('Danh mục'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Tiếng ồn').last);
@@ -327,6 +328,109 @@ void main() {
       expect(sent, containsPair('department', 'technical'));
       expect(sent!['deadline'], isA<String>());
       expect(find.text('Đã phân công'), findsOneWidget);
+    },
+  );
+
+  testWidgets('cư dân rút phiếu: lý do không bắt buộc, gọi PATCH cancel', (
+    tester,
+  ) async {
+    RequestOptions? patched;
+    await openDetail(
+      tester,
+      role: 'resident',
+      request: _req(actions: ['cancel']),
+      onPatch: (req) {
+        patched = req;
+        return okJson(_req(status: 'cancelled'));
+      },
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Rút phiếu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rút phiếu SR-ABC234?'), findsOneWidget);
+    // Không nhập lý do vẫn rút được
+    await tester.tap(find.widgetWithText(FilledButton, 'Rút phiếu'));
+    await tester.pumpAndSettle();
+    expect(patched?.path, '/service-requests/r1/cancel');
+    expect(patched?.data, isEmpty);
+    expect(find.text('Đã rút phiếu'), findsOneWidget);
+  });
+
+  testWidgets(
+    'form tạo phiếu: danh mục lọc theo loại; thoát khi đã nhập thì hỏi lại',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final adapter = FakeAdapter((req) {
+        switch (req.path) {
+          case '/users/me':
+            return okJson(userJson(fullName: 'Chủ Hộ'));
+          case '/notifications/unread-count':
+            return okJson({'count': 0});
+          case '/apartments/mine':
+            return okJson([_apt]);
+        }
+        return okJson(<Object>[], _paged);
+      });
+      await tester.pumpWidget(
+        buildTestApp(adapter: adapter, tokens: MemoryTokenStorage('t')),
+      );
+      await tester.pumpAndSettle();
+      final router = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      ).read(routerProvider);
+      router.push('/requests/new');
+      await tester.pumpAndSettle();
+
+      // Form trống: quay lại thoát luôn, không hỏi
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.text('Bỏ nội dung đang nhập?'), findsNothing);
+      expect(find.text('Tạo phiếu'), findsNothing);
+
+      router.push('/requests/new');
+      await tester.pumpAndSettle();
+      // Sửa chữa: có Điện, không có Tiếng ồn
+      await tester.tap(find.text('Danh mục'));
+      await tester.pumpAndSettle();
+      expect(find.text('Điện'), findsWidgets);
+      expect(find.text('Tiếng ồn'), findsNothing);
+      await tester.tap(find.text('Thang máy').last);
+      await tester.pumpAndSettle();
+
+      // Đổi sang Phản ánh: Thang máy dùng chung nên giữ; có Tiếng ồn, không có Điện
+      await tester.tap(find.text('Phản ánh'));
+      await tester.pumpAndSettle();
+      expect(find.text('Thang máy'), findsOneWidget);
+      await tester.tap(find.text('Thang máy'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tiếng ồn'), findsWidgets);
+      expect(find.text('Điện'), findsNothing);
+      await tester.tap(find.text('Tiếng ồn').last);
+      await tester.pumpAndSettle();
+
+      // Về Sửa chữa: Tiếng ồn không hợp lệ -> bỏ chọn
+      await tester.tap(find.text('Sửa chữa'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tiếng ồn'), findsNothing);
+
+      // Đã nhập tiêu đề: quay lại phải hỏi; Hủy thì ở lại, Bỏ thì thoát
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Tiêu đề'),
+        'Đang gõ dở',
+      );
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.text('Bỏ nội dung đang nhập?'), findsOneWidget);
+      await tester.tap(find.text('Hủy'));
+      await tester.pumpAndSettle();
+      expect(find.text('Đang gõ dở'), findsOneWidget);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Bỏ'));
+      await tester.pumpAndSettle();
+      expect(find.text('Đang gõ dở'), findsNothing);
     },
   );
 }

@@ -251,7 +251,7 @@ class SimpleBarChart extends StatelessWidget {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 34,
+                reservedSize: 46, // nhãn 2 dòng, không cắt chữ có dấu/descender
                 getTitlesWidget: (value, meta) {
                   final i = value.toInt();
                   if (i < 0 || i >= data.length) return const SizedBox.shrink();

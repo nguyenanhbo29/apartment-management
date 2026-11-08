@@ -167,6 +167,22 @@ describe('UC-37 đặt tiện ích', () => {
     expect(await usedOf(a)).toBe(2); // transaction rollback phần giữ chỗ
   });
 
+  test('Mongo standalone (không transaction): vẫn đặt được; đặt trùng thì trả lại chỗ đã giữ', async () => {
+    const { _setTransactionSupport } = require('../src/shared/transaction');
+    _setTransactionSupport(false);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const a = await createAmenity();
+      expect((await bookVia(residents[0], a, { numberOfParticipants: 2 })).status).toBe(201);
+      const dup = await bookVia(member, a, { numberOfParticipants: 3 });
+      expect(dup.body.error.code).toBe('BOOKING_DUPLICATE');
+      expect(await usedOf(a)).toBe(2); // compensate trả lại 3 chỗ
+    } finally {
+      _setTransactionSupport(undefined);
+      warn.mockRestore();
+    }
+  });
+
   test('TRANH CHẤP: 8 căn cùng đặt slot còn 3 chỗ → đúng 3 thành công, không vượt sức chứa', async () => {
     const a = await createAmenity({ capacity: 3 });
     const results = await Promise.all(residents.map((r) => bookVia(r, a)));
@@ -184,6 +200,9 @@ describe('UC-37 đặt tiện ích', () => {
     );
     expect(results.filter((r) => r.status === 201)).toHaveLength(2); // 2 + 2 = 4, nhóm thứ 3 cần 6 > 5
     expect(await usedOf(a)).toBe(4);
+    // Còn 1 chỗ: báo rõ số chỗ còn lại thay vì 'đã đầy'
+    const late = await bookVia(residents[5], a, { numberOfParticipants: 2 });
+    expect(late.body.error.message).toBe('Khung giờ chỉ còn 1 chỗ, không đủ cho 2 người');
   });
 
   test('cần duyệt: pending vẫn giữ chỗ, báo Facility', async () => {

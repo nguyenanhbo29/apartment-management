@@ -91,6 +91,11 @@ describe('UC-48 báo cáo hiệu suất: số khớp tính tay', () => {
     await requestService.transition(B(), r3._id, 'start');
     await requestService.transition(B(), r3._id, 'finish', { note: 'xong' });
 
+    // req4: giao A rồi cư dân rút phiếu -> không tính cho ai
+    const r4 = await newRequest('Phiếu 4');
+    await assign(r4._id, A());
+    await requestService.transition(R(), r4._id, 'cancel', { reason: 'Tự sửa được' });
+
     // task1: giao B, B hoàn thành đúng hạn
     const t1 = await taskService.create(M(), {
       title: 'Kiểm tra PCCC',
@@ -107,9 +112,11 @@ describe('UC-48 báo cáo hiệu suất: số khớp tính tay', () => {
     expect(res.status).toBe(200);
     const byName = Object.fromEntries(res.body.data.items.map((i) => [i.staff.fullName, i]));
 
-    // A: được giao 3 (r1, r2, r3); hoàn thành 2 (r1 đúng hạn, r2 trễ — chỉ tính lần báo xong đầu)
+    // A: được giao 2 (r1, r2), bị chuyển đi 1 (r3), r4 cư dân rút không tính;
+    // hoàn thành 2 (r1 đúng hạn, r2 trễ — chỉ tính lần báo xong đầu)
     expect(byName['A Kỹ Thuật']).toMatchObject({
-      assigned: 3,
+      assigned: 2,
+      transferredAway: 1,
       completed: 2,
       onTime: 1,
       onTimeRate: 0.5,
@@ -122,6 +129,7 @@ describe('UC-48 báo cáo hiệu suất: số khớp tính tay', () => {
     // B: được giao 2 (reassign r3 + task1); hoàn thành 2, đều đúng hạn; chưa có đánh giá
     expect(byName['B Kỹ Thuật']).toMatchObject({
       assigned: 2,
+      transferredAway: 0,
       completed: 2,
       onTime: 2,
       onTimeRate: 1,
@@ -138,7 +146,7 @@ describe('UC-48 báo cáo hiệu suất: số khớp tính tay', () => {
       avgRating: null,
     });
 
-    expect(res.body.data.totals).toMatchObject({ assigned: 5, completed: 4, onTime: 3, onTimeRate: 0.75 });
+    expect(res.body.data.totals).toMatchObject({ assigned: 4, transferredAway: 1, completed: 4, onTime: 3, onTimeRate: 0.75 });
     // Sắp xếp: hoàn thành nhiều trước, rồi được giao nhiều trước
     expect(res.body.data.items.map((i) => i.staff.fullName)).toEqual(['A Kỹ Thuật', 'B Kỹ Thuật', 'C Bảo Vệ']);
   });

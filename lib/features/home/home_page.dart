@@ -51,7 +51,7 @@ const _features = <_Feature>[
   _Feature('Khách tại cổng', Icons.door_front_door_outlined, '/visitors/gate', _gateViewer),
   _Feature('Tiện ích', Icons.pool_outlined, '/amenities', _amenityViewer),
   _Feature('Lịch đặt của tôi', Icons.event_available_outlined, '/bookings', _resident),
-  _Feature('Duyệt đặt tiện ích', Icons.fact_check_outlined, '/bookings/queue', _bookingReviewer),
+  _Feature('Lượt đặt tiện ích', Icons.fact_check_outlined, '/bookings/queue', _bookingReviewer),
   _Feature('Dashboard vận hành', Icons.dashboard_outlined, '/dashboard', _manager),
   _Feature('Hiệu suất nhân viên', Icons.leaderboard_outlined, '/reports/staff', _manager),
   _Feature('Nhiệm vụ vận hành', Icons.add_task, '/tasks', _manager),

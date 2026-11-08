@@ -102,7 +102,7 @@ class _BookingQueuePageState extends ConsumerState<BookingQueuePage> {
   Widget build(BuildContext context) {
     final repo = ref.watch(amenitiesRepositoryProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Duyệt đặt tiện ích')),
+      appBar: AppBar(title: const Text('Lượt đặt tiện ích')),
       body: Column(
         children: [
           SizedBox(

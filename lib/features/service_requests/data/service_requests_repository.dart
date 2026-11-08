@@ -131,6 +131,13 @@ class ServiceRequestsRepository {
 
   Future<ServiceRequest> reopen(String id, String reason) =>
       _patch(id, 'reopen', {'reason': reason});
+
+  /// Cư dân rút phiếu (chỉ khi chờ tiếp nhận / đã phân công, chưa ai bắt đầu làm).
+  Future<ServiceRequest> cancel(String id, {String? reason}) => _patch(
+    id,
+    'cancel',
+    {if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim()},
+  );
 }
 
 final serviceRequestsRepositoryProvider = Provider<ServiceRequestsRepository>(

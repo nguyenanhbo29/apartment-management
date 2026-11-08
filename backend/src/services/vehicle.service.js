@@ -15,6 +15,20 @@ const { notifyUsers } = require('./notify.service');
 
 const normalizePlate = (raw = '') => raw.toUpperCase().replace(/[\s.\-]/g, '');
 const PLATE_REGEX = /^[0-9]{2}[A-Z]{1,2}[0-9]{4,6}$/;
+
+/** Dạng hiển thị trong thông báo / lỗi (giống formatPlate bên Flutter). */
+function formatPlate(plate = '') {
+  const m = plate.match(/^(\d{2}[A-Z]{1,2})(\d+)$/);
+  if (!m) return plate;
+  let [, series, digits] = m;
+  // 1 chữ cái + 6 số: số đầu thuộc seri xe máy (29-H1 555.55)
+  if (series.length === 3 && digits.length === 6) {
+    series += digits[0];
+    digits = digits.slice(1);
+  }
+  const tail = digits.length === 5 ? `${digits.slice(0, 3)}.${digits.slice(3)}` : digits;
+  return `${series}-${tail}`;
+}
 const UPLOAD_FOLDER = 'vehicles';
 
 const isSecurity = (u) => u.role === ROLES.STAFF && u.department === DEPARTMENTS.SECURITY;
@@ -28,7 +42,7 @@ const POPULATE = [
 ];
 
 const duplicatePlate = (plate) =>
-  new AppError(ERROR_CODES.VEHICLE_PLATE_DUPLICATE, `Biển số ${plate} đã được đăng ký và đang hoạt động`);
+  new AppError(ERROR_CODES.VEHICLE_PLATE_DUPLICATE, `Biển số ${formatPlate(plate)} đã được đăng ký và đang hoạt động`);
 
 /** Phạm vi xem; cư dân: xe của các căn mình đang ở. null = không được xem. */
 async function scopeFor(actor) {
@@ -75,6 +89,13 @@ async function register(actor, data, files = []) {
   }
   // Báo sớm cho dễ hiểu; nhiều hồ sơ pending trùng nhau vẫn được, duyệt trước thắng
   if (await Vehicle.exists({ plateNumber, status: V.APPROVED })) throw duplicatePlate(plateNumber);
+  // Cùng căn gửi lại biển đang chờ duyệt (bấm hai lần, gửi lại vì tưởng lỗi): chặn ngay
+  if (await Vehicle.exists({ plateNumber, apartmentId: data.apartmentId, status: V.PENDING })) {
+    throw new AppError(
+      ERROR_CODES.VEHICLE_PLATE_DUPLICATE,
+      `Căn hộ đã gửi đăng ký biển số ${formatPlate(plateNumber)}, đang chờ duyệt`
+    );
+  }
 
   const [imageUrl] = await saveImages(files, UPLOAD_FOLDER);
   let vehicle;
@@ -94,8 +115,8 @@ async function register(actor, data, files = []) {
   await notifyUsers({
     userIds: await activeSecurityIds(),
     type: 'vehicle_submitted',
-    title: `Đăng ký xe mới ${plateNumber}`,
-    body: `${actor.fullName} đăng ký ${vehicle.type === 'car' ? 'ô tô' : 'xe máy'} ${plateNumber}`,
+    title: `Đăng ký xe mới ${formatPlate(plateNumber)}`,
+    body: `${actor.fullName} đăng ký ${vehicle.type === 'car' ? 'ô tô' : 'xe máy'} ${formatPlate(plateNumber)}`,
     link: link(vehicle),
   });
   return vehicle;
@@ -174,7 +195,7 @@ async function approve(actor, id) {
   await notifyUsers({
     userIds: [vehicle.ownerId],
     type: 'vehicle_approved',
-    title: `Xe ${vehicle.plateNumber} đã được duyệt`,
+    title: `Xe ${formatPlate(vehicle.plateNumber)} đã được duyệt`,
     body: 'Xe đã được ghi nhận gửi tại tòa nhà',
     link: link(vehicle),
   });
@@ -192,7 +213,7 @@ async function reject(actor, id, reason) {
   await notifyUsers({
     userIds: [vehicle.ownerId],
     type: 'vehicle_rejected',
-    title: `Đăng ký xe ${vehicle.plateNumber} bị từ chối`,
+    title: `Đăng ký xe ${formatPlate(vehicle.plateNumber)} bị từ chối`,
     body: `Lý do: ${reason}`,
     link: link(vehicle),
   });
@@ -217,7 +238,7 @@ async function deactivate(actor, id) {
     await notifyUsers({
       userIds: [updated.ownerId],
       type: 'vehicle_deactivated',
-      title: `Xe ${updated.plateNumber} đã ngừng sử dụng`,
+      title: `Xe ${formatPlate(updated.plateNumber)} đã ngừng sử dụng`,
       body: 'Ban quản lý đã chuyển xe sang ngừng sử dụng',
       link: link(updated),
     });
@@ -232,6 +253,7 @@ const getBillableVehicles = (apartmentId) =>
 
 module.exports = {
   normalizePlate,
+  formatPlate,
   PLATE_REGEX,
   register,
   listMine,

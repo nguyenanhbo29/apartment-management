@@ -111,7 +111,17 @@ async function reserveSlot({ amenity, slotStart, people }, session) {
     { $inc: { used: people } },
     { new: true, session }
   );
-  if (!slot) throw new AppError(ERROR_CODES.SLOT_FULL, 'Khung giờ đã đầy, vui lòng chọn khung khác');
+  if (!slot) {
+    // Báo số chỗ còn lại để cư dân giảm số người thay vì nghĩ là hết hẳn
+    const current = await AmenitySlot.findOne({ amenityId: amenity._id, slotStart }).session(session);
+    const remaining = Math.max(0, amenity.capacity - (current?.used ?? 0));
+    throw new AppError(
+      ERROR_CODES.SLOT_FULL,
+      remaining > 0
+        ? `Khung giờ chỉ còn ${remaining} chỗ, không đủ cho ${people} người`
+        : 'Khung giờ đã đầy, vui lòng chọn khung khác'
+    );
+  }
 }
 
 const releaseSlot = (booking, session) =>
@@ -163,9 +173,11 @@ async function book(actor, data) {
 
   await ensureSlot(amenity._id, slot.start);
   let booking;
+  let reserved = false;
   try {
     booking = await withTransaction(async (session) => {
       await reserveSlot({ amenity, slotStart: slot.start, people }, session);
+      reserved = true;
       const [doc] = await AmenityBooking.create(
         [
           {
@@ -184,6 +196,15 @@ async function book(actor, data) {
         { session }
       );
       return doc;
+    }, {
+      // Mongo standalone (không transaction): tạo booking lỗi thì trả lại chỗ đã giữ
+      compensate: async () => {
+        if (!reserved) return;
+        await AmenitySlot.updateOne(
+          { amenityId: amenity._id, slotStart: slot.start },
+          { $inc: { used: -people } }
+        );
+      },
     });
   } catch (err) {
     // one_active_booking_per_apartment_slot (transaction đã rollback phần giữ chỗ)

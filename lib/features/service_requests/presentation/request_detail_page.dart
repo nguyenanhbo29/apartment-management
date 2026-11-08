@@ -101,6 +101,23 @@ class _RequestDetailPageState extends ConsumerState<RequestDetailPage> {
         if (reason != null) {
           await _run(() => _repo.reopen(id, reason), 'Đã gửi yêu cầu làm lại');
         }
+      case RequestAction.cancel:
+        final reason = await reasonDialog(
+          context,
+          title: 'Rút phiếu ${r.code}?',
+          label: 'Lý do (không bắt buộc)',
+          confirmText: 'Rút phiếu',
+          destructive: true,
+          required: false,
+        );
+        if (reason != null) {
+          await _run(
+            () => _repo.cancel(id, reason: reason),
+            r.status == RequestStatus.assigned
+                ? 'Đã rút phiếu và báo nhân viên'
+                : 'Đã rút phiếu',
+          );
+        }
     }
   }
 
@@ -117,7 +134,10 @@ class _RequestDetailPageState extends ConsumerState<RequestDetailPage> {
           16,
           16,
           16,
-          MediaQuery.of(ctx).viewInsets.bottom + 16,
+          // Chừa thanh điều hướng hệ thống (gesture bar) và bàn phím
+          MediaQuery.of(ctx).viewInsets.bottom +
+              MediaQuery.of(ctx).viewPadding.bottom +
+              16,
         ),
         child: Form(
           key: formKey,
@@ -292,7 +312,8 @@ class _RequestDetailPageState extends ConsumerState<RequestDetailPage> {
   bool _isSecondary(RequestAction a) =>
       a == RequestAction.reject ||
       a == RequestAction.reopen ||
-      a == RequestAction.reassign;
+      a == RequestAction.reassign ||
+      a == RequestAction.cancel;
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -334,6 +355,17 @@ class _Header extends StatelessWidget {
           Text(
             'Lý do từ chối: ${r.rejectReason}',
             style: TextStyle(color: theme.colorScheme.error),
+          ),
+        ],
+        if (r.status == RequestStatus.cancelled) ...[
+          const SizedBox(height: 12),
+          Text(
+            r.cancelReason == null
+                ? 'Cư dân đã rút phiếu'
+                : 'Cư dân đã rút phiếu: ${r.cancelReason}',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ],

@@ -78,6 +78,10 @@ Vì vậy Giai đoạn 0 chỉ còn **bổ sung phần khung mà module vận h�
 | 9 | Nhân viên nghỉ việc biểu diễn thế nào? | **✅ Đã chốt 2026-11-08:** dùng `User.status = inactive` (UC-05 của Người 1). Người 1 gọi `assertNoOpenWork` trước khi khóa tài khoản hoặc đổi vai trò staff (mục 3) |
 | 10 | Cư dân truy cập dữ liệu căn hộ khác trả 403 hay 404? | **✅ Đã chốt 2026-11-08:** truy cập dữ liệu căn hộ khác trả 403 `FORBIDDEN`, giống Người 1. Riêng truy cập theo id (phiếu, booking, xe) trả 404 `NOT_FOUND` |
 | 11 | Tiện ích có sự cố (bảo trì, hỏng) thì lượt đặt đã xác nhận xử lý thế nào? Trước đây chỉ người đặt tự hủy được, "Manager tự xử lý" nhưng không có API | **✅ Đã chốt 2026-11-08:** thêm **"Hủy do sự cố"** (`PATCH /amenity-bookings/:id/cancel-by-staff`) cho Facility và Manager: bắt buộc lý do, không áp dụng hạn hủy, chỉ lượt chưa kết thúc, trả chỗ, báo cư dân. Duyệt / từ chối vẫn **chỉ Facility** |
+| 12 | Cư dân rút lại phiếu đã gửi? | **✅ Đã chốt 2026-11-08:** thêm trạng thái `cancelled` và `PATCH /service-requests/:id/cancel`. Chỉ **người tạo**, khi phiếu `pending` hoặc `assigned` **và chưa từng xử lý** (`firstFinishedAt` rỗng); `in_progress` trở đi không rút được (đã làm thì nghiệm thu). Lý do không bắt buộc. Đã phân công thì báo nhân viên (`service_request_cancelled`). Không tính vào "phiếu mới" trên dashboard, không tính hiệu suất của ai |
+| 13 | "Được giao" trong báo cáo hiệu suất tính việc đã bị chuyển đi? | **✅ Đã chốt 2026-11-08 (phương án C):** `assigned` đếm theo **việc** người đó vẫn giữ hoặc đã làm xong; thêm cột **"Bị chuyển đi"** (`transferredAway`). Việc đã hủy / cư dân rút không tính cho ai |
+| 14 | Danh mục phiếu có phụ thuộc loại phiếu? | **✅ Đã chốt 2026-11-08:** Sửa chữa: điện, cấp thoát nước, internet, thang máy, vệ sinh, khác. Phản ánh: thang máy, vệ sinh, tiếng ồn, an ninh, thái độ phục vụ, khác. Kiểm tra cả backend (`REQUEST_CATEGORIES_BY_TYPE`, sai → 400) và app (đổi loại thì bỏ chọn danh mục không hợp lệ) |
+| 15 | Thoát form tạo mới khi đang nhập dở? | **✅ Đã chốt 2026-11-08:** hỏi "Bỏ nội dung đang nhập?" khi form đã có dữ liệu (widget dùng chung `core/widgets/unsaved_changes_guard.dart`), form trống thì thoát luôn. Áp dụng 6 form của Người 2; báo Người 1 để dùng cho form của họ |
 
 ---
 
@@ -799,6 +803,19 @@ Flutter: widget test theo mẫu `test/helpers/fake_api.dart` của Người 1, c
 3. **Khách:** Cư dân tạo lịch → Security tìm theo mã, check-in → cư dân nhận thông báo (chuông của Người 1) → check-out.
 4. **Tiện ích:** Hai cư dân tranh slot cuối → một người bị báo đầy → người kia hủy → slot trống lại.
 5. **Quản lý:** Manager giao nhiệm vụ, chuyển người → mở dashboard → bấm số quá hạn → xem báo cáo hiệu suất.
+
+**Trạng thái Giai đoạn 7 (2026-11-08):** ✅ Phần của Người 2 xong.
+- `npm run db` (`scripts/dev-db.js`): replica set cho dev / demo bằng binary của mongodb-memory-server, cổng 27018, dữ liệu lưu `backend/.mongo-data` (đã gitignore) — không cần cài Mongo, không cần quyền admin.
+- `scripts/seedOperations.js` (gọi từ `seed.js`): 9 phiếu đủ trạng thái (chờ tiếp nhận, khẩn cấp, đang giao, đang làm **quá hạn**, chờ nghiệm thu, đóng 5★, đóng 3★ có làm lại, bị từ chối), 3 nhiệm vụ (1 quá hạn), 4 xe (1 chờ duyệt), 2 khách hôm nay, 2 lượt đặt (BBQ chờ duyệt). Lịch sử khớp từng bước để timeline và báo cáo có số. Chạy lại không trùng.
+- **Chạy thử thật** (server + replica set, gọi HTTP): đủ 5 kịch bản mục 10.2 — 32/32 bước pass (upload ảnh và mở lại qua `/uploads`, check-in đồng thời, 3 căn tranh 2 chỗ, số quá hạn trên dashboard khớp danh sách nguồn...). `flutter build web` thành công. **Chưa bấm thử giao diện trên thiết bị.**
+- Sửa seed tiện ích: sức chứa tính theo **số người**, nên BBQ / phòng sinh hoạt đổi từ 1 → 15 / 30 người.
+- **Điểm nghiệp vụ còn hở:** tiện ích kiểu "mỗi khung giờ chỉ một căn dùng riêng" (BBQ, phòng sinh hoạt) chưa biểu diễn được — hiện nhiều căn có thể cùng đặt một khung miễn còn chỗ. Nếu cần: thêm cờ `exclusive` cho Amenity, khi đó giữ chỗ theo lượt (mỗi booking chiếm cả slot) thay vì theo số người.
+- **Bấm thử giao diện trên Android emulator (2026-11-08):** đủ 5 kịch bản + từ chối phiếu, hủy nhiệm vụ, hủy lịch khách, đặt tiện ích không cần duyệt, thêm / sửa / tạm ngưng tiện ích, khóa nhân viên còn việc (bị chặn), thông báo và điều hướng từ chuông. Lỗi tìm thấy đã sửa:
+  - **Mongo standalone** (mặc định 27017, không replica set): mọi thao tác dùng transaction trả "Lỗi hệ thống". `shared/transaction.js` giờ tự nhận biết và chạy không transaction (cảnh báo 1 lần); `book()` có bước hoàn tác trả chỗ. Production vẫn cần replica set.
+  - Cùng căn gửi trùng biển số đang chờ duyệt: chặn ngay (409). Biển xe máy seri chữ + số hiển thị `29H1-555.55` (Flutter và nội dung thông báo).
+  - Bottom sheet (đặt tiện ích, báo hoàn thành phiếu / nhiệm vụ) bị thanh điều hướng che nút; nhãn biểu đồ dashboard bị cắt; form đặt cảnh báo khi đã quá hạn hủy; lỗi hết chỗ báo "chỉ còn N chỗ"; nút đóng hộp thoại lý do đổi "Hủy" → "Đóng"; tra biển số tìm mọi trạng thái; ô "Duyệt đặt tiện ích" đổi thành "Lượt đặt tiện ích" (Manager chỉ xem).
+  - Bốn điểm nghiệp vụ phát hiện khi bấm thử đã chốt và làm xong: mục 2.2 #12–15.
+- Phần làm chung với Người 1 còn lại: Người 1 gọi `vehicleService.getBillableVehicles(apartmentId)` trong UC-20; thống nhất widget biểu đồ khi họ làm báo cáo tài chính.
 
 ### 10.3. Tiêu chí hoàn thành một UC
 

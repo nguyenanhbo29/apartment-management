@@ -7,3 +7,6 @@ coverage/
 
 # Ảnh người dùng upload
 uploads/
+
+# MongoDB dev (npm run db)
+.mongo-data/

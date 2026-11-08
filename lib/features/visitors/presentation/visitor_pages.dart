@@ -11,6 +11,7 @@ import '../../../core/widgets/common.dart';
 import '../../../core/widgets/media_widgets.dart';
 import '../../../core/widgets/paged_list_view.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../../core/widgets/unsaved_changes_guard.dart';
 import '../../apartments/application/apartments_providers.dart';
 import '../../apartments/data/models.dart';
 import '../../auth/application/auth_controller.dart';
@@ -277,130 +278,148 @@ class _VisitorFormPageState extends ConsumerState<VisitorFormPage> {
   @override
   Widget build(BuildContext context) {
     final apartments = ref.watch(myApartmentsProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Đăng ký khách')),
-      body: apartments.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorView(
-          error: e,
-          onRetry: () => ref.invalidate(myApartmentsProvider),
-        ),
-        data: (list) => list.isEmpty
-            ? const Center(
-                child: Text('Bạn chưa được ghi nhận cư trú tại căn hộ nào.'),
-              )
-            : Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    if (list.length > 1) ...[
-                      DropdownButtonFormField<String>(
-                        initialValue: _apartmentId,
-                        decoration: const InputDecoration(labelText: 'Căn hộ'),
-                        items: [
-                          for (final a in list)
-                            DropdownMenuItem(value: a.id, child: Text(a.code)),
-                        ],
-                        validator: (v) => v == null ? 'Chọn căn hộ' : null,
-                        onChanged: (v) => setState(() => _apartmentId = v),
+    return UnsavedChangesGuard(
+      isDirty: () =>
+          _name.text.trim().isNotEmpty ||
+          _phone.text.trim().isNotEmpty ||
+          _plate.text.trim().isNotEmpty ||
+          _note.text.trim().isNotEmpty,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Đăng ký khách')),
+        body: apartments.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorView(
+            error: e,
+            onRetry: () => ref.invalidate(myApartmentsProvider),
+          ),
+          data: (list) => list.isEmpty
+              ? const Center(
+                  child: Text('Bạn chưa được ghi nhận cư trú tại căn hộ nào.'),
+                )
+              : Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      if (list.length > 1) ...[
+                        DropdownButtonFormField<String>(
+                          initialValue: _apartmentId,
+                          decoration: const InputDecoration(
+                            labelText: 'Căn hộ',
+                          ),
+                          items: [
+                            for (final a in list)
+                              DropdownMenuItem(
+                                value: a.id,
+                                child: Text(a.code),
+                              ),
+                          ],
+                          validator: (v) => v == null ? 'Chọn căn hộ' : null,
+                          onChanged: (v) => setState(() => _apartmentId = v),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      TextFormField(
+                        controller: _name,
+                        decoration: const InputDecoration(
+                          labelText: 'Tên khách',
+                        ),
+                        validator: (v) => (v ?? '').trim().length < 2
+                            ? 'Nhập tên khách'
+                            : null,
                       ),
                       const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _phone,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: 'Số điện thoại khách (không bắt buộc)',
+                        ),
+                        validator: (v) {
+                          final s = (v ?? '').trim();
+                          return s.isEmpty ||
+                                  RegExp(r'^\+?\d{9,15}$').hasMatch(s)
+                              ? null
+                              : 'Số điện thoại không hợp lệ';
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _people,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Số người',
+                        ),
+                        validator: (v) {
+                          final n = int.tryParse(v ?? '');
+                          return n == null || n < 1 || n > 50
+                              ? 'Từ 1 đến 50 người'
+                              : null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.event_outlined),
+                        title: const Text('Ngày đến'),
+                        subtitle: Text(formatDate(_date)),
+                        onTap: _pickDate,
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.login),
+                              title: const Text('Từ'),
+                              subtitle: Text(_from.format(context)),
+                              onTap: () => _pickTime(true),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.logout),
+                              title: const Text('Đến'),
+                              subtitle: Text(_to.format(context)),
+                              onTap: () => _pickTime(false),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_timeError != null)
+                        Text(
+                          _timeError!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _plate,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(
+                          labelText: 'Biển số xe khách (không bắt buộc)',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _note,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Ghi chú (không bắt buộc)',
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      LoadingButton(
+                        loading: _saving,
+                        onPressed: () => _submit(list),
+                        label: 'Đăng ký',
+                      ),
                     ],
-                    TextFormField(
-                      controller: _name,
-                      decoration: const InputDecoration(labelText: 'Tên khách'),
-                      validator: (v) =>
-                          (v ?? '').trim().length < 2 ? 'Nhập tên khách' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _phone,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Số điện thoại khách (không bắt buộc)',
-                      ),
-                      validator: (v) {
-                        final s = (v ?? '').trim();
-                        return s.isEmpty || RegExp(r'^\+?\d{9,15}$').hasMatch(s)
-                            ? null
-                            : 'Số điện thoại không hợp lệ';
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _people,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Số người'),
-                      validator: (v) {
-                        final n = int.tryParse(v ?? '');
-                        return n == null || n < 1 || n > 50
-                            ? 'Từ 1 đến 50 người'
-                            : null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.event_outlined),
-                      title: const Text('Ngày đến'),
-                      subtitle: Text(formatDate(_date)),
-                      onTap: _pickDate,
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.login),
-                            title: const Text('Từ'),
-                            subtitle: Text(_from.format(context)),
-                            onTap: () => _pickTime(true),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.logout),
-                            title: const Text('Đến'),
-                            subtitle: Text(_to.format(context)),
-                            onTap: () => _pickTime(false),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_timeError != null)
-                      Text(
-                        _timeError!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _plate,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Biển số xe khách (không bắt buộc)',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _note,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Ghi chú (không bắt buộc)',
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    LoadingButton(
-                      loading: _saving,
-                      onPressed: () => _submit(list),
-                      label: 'Đăng ký',
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }

@@ -15,6 +15,22 @@ Test không cần cài MongoDB: `tests/globalSetup.js` bật một replica set t
 cho cả bộ test rồi tắt khi xong. Lần chạy đầu tải binary `mongod` (~100 MB) vào cache.
 Muốn chạy trên Mongo thật thì đặt `MONGODB_TEST_URI` (Mongo đó phải là replica set nếu test có transaction).
 
+### Chạy app có transaction (module vận hành cần)
+Phiếu, đặt tiện ích, nhiệm vụ dùng MongoDB transaction → cần **replica set**; `mongod` cài kiểu
+standalone sẽ báo lỗi khi tạo phiếu / đặt chỗ. Cách không cần cài đặt hay quyền admin:
+
+```bash
+npm run db               # cửa sổ 1: replica set ở cổng 27018, dữ liệu ở backend/.mongo-data (Ctrl+C để tắt)
+# .env: MONGODB_URI=mongodb://127.0.0.1:27018/apartment_management?replicaSet=rs0
+npm run seed             # cửa sổ 2: tài khoản + căn hộ + tiện ích + dữ liệu demo vận hành
+npm run dev
+```
+
+Hoặc dùng MongoDB Atlas (đã là replica set sẵn). Tài khoản seed: `manager@apartment.local / Manager@123`;
+còn lại mật khẩu `Demo@123`: `technical`, `technical2`, `security`, `facility`, `reception`, `accountant`,
+`resident1`…`resident4` `@apartment.local`. Dữ liệu demo có phiếu ở mọi trạng thái (kể cả quá hạn, chờ
+nghiệm thu, đã đánh giá), nhiệm vụ quá hạn, xe chờ duyệt, khách hôm nay, lượt BBQ chờ duyệt.
+
 ## Quy ước chung
 - Cấu trúc: `routes -> controllers -> services -> models`.
 - Response thành công: `{ success: true, data, meta? }`.
@@ -100,6 +116,7 @@ Loại notification các module đang dùng (`link.kind` để app mở đúng m
 | `service_request_waiting_confirmation` | `service_request` | Người tạo phiếu |
 | `service_request_closed` | `service_request` | Nhân viên được giao |
 | `service_request_reopened` | `service_request` | Nhân viên được giao, Manager |
+| `service_request_cancelled` | `service_request` | Nhân viên được giao (cư dân rút phiếu đã phân công) |
 | `service_request_auto_closed` | `service_request` | Người tạo phiếu, nhân viên được giao |
 | `vehicle_submitted` | `vehicle` | Bảo vệ |
 | `vehicle_approved` / `vehicle_rejected` | `vehicle` | Người đăng ký xe |
@@ -131,6 +148,7 @@ Cần MongoDB **replica set** (transaction): test tự có; chạy app dùng Atl
 | PATCH | `/api/service-requests/:id/finish` (multipart) | nhân viên được giao (`note`, ảnh) | UC-33 |
 | PATCH | `/api/service-requests/:id/confirm` | người tạo (`rating` 1–5, `feedback?`) | UC-34 |
 | PATCH | `/api/service-requests/:id/reopen` | người tạo (`reason`) | UC-34 |
+| PATCH | `/api/service-requests/:id/cancel` | người tạo (`reason?`) — chỉ khi `pending` / `assigned` và chưa từng xử lý | Rút phiếu |
 | GET | `/api/me/assignments?tab=active\|overdue\|done` | staff — phiếu + nhiệm vụ, mỗi mục có `kind: 'request'\|'task'` | UC-31 |
 | POST | `/api/tasks` | manager (`title`, `category?`, `location?`, `priority?`, `department`, `staffId`, `deadline`) | UC-41 |
 | GET | `/api/tasks?status=&department=&staffId=&overdue=&from=&to=` | manager (tất cả) / staff (luôn chỉ của mình) | UC-41, 42 |
@@ -175,7 +193,8 @@ Dashboard / báo cáo: `from`, `to` là ngày giờ VN (YYYY-MM-DD, gồm cả n
 tối đa 366 ngày. Dashboard: `byStatus`, `open`, `overdue` của phiếu / nhiệm vụ là số **hiện tại** (khớp danh
 sách khi bấm xem); `createdInRange` và lượt đặt tiện ích tính trong khoảng. Báo cáo hiệu suất: hoàn thành
 phiếu tính **lần báo xong đầu tiên**, đúng hạn tính theo lúc nhân viên báo xong (không theo lúc nghiệm thu);
-chỉ số không có dữ liệu trả `null` (không phải 0).
+chỉ số không có dữ liệu trả `null` (không phải 0). `assigned` đếm theo **việc** người đó vẫn giữ hoặc đã
+làm xong; việc bị chuyển sang người khác tính vào `transferredAway`; việc đã hủy / cư dân rút không tính cho ai.
 
 Đặt tiện ích: giữ chỗ bằng collection `amenityslots` (update có điều kiện trong transaction) nên không
 vượt sức chứa khi nhiều người đặt cùng lúc → 409 `SLOT_FULL`; một căn một lượt/slot → 409
@@ -190,7 +209,7 @@ Khách ngoài khung giờ: 409 `VISITOR_OUT_OF_WINDOW`; quá giờ chưa đến:
 \* Manager: mọi phiếu. Staff: phiếu đang giao cho mình. Resident: phiếu mình tạo + phiếu sửa chữa của
 căn mình đang ở. Ngoài phạm vi trả 404. Sai trạng thái trả 409 `INVALID_STATE`.
 Luồng: `pending → assigned → in_progress → waiting_confirmation → closed`; nhánh `rejected`,
-`reopened`; job mỗi giờ tự đóng phiếu chờ nghiệm thu quá 7 ngày.
+`reopened`, `cancelled` (cư dân rút); danh mục phải thuộc loại phiếu (`REQUEST_CATEGORIES_BY_TYPE`, sai → 400); job mỗi giờ tự đóng phiếu chờ nghiệm thu quá 7 ngày.
 
 `MAIL_MODE=console` (mặc định): OTP in ra console và trả trong `data.devOtp` để demo.
 `MAIL_MODE=smtp`: gửi email thật, cần `SMTP_USER` + `SMTP_PASS` (Gmail App Password).

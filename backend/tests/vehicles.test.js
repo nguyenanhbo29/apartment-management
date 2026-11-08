@@ -107,6 +107,14 @@ describe('UC-14 duyệt xe và chống trùng biển số', () => {
     expect(again.body.error.code).toBe('VEHICLE_PLATE_DUPLICATE');
   });
 
+  test('cùng căn gửi lại biển đang chờ duyệt: 409; căn khác vẫn gửi được', async () => {
+    expect((await registerVia(owner, '29H1-555.55')).status).toBe(201);
+    const again = await registerVia(member, '29h155555');
+    expect(again.status).toBe(409);
+    expect(again.body.error.code).toBe('VEHICLE_PLATE_DUPLICATE');
+    expect((await registerVia(outsider, '29H1-555.55', aptB)).status).toBe(201);
+  });
+
   test('duyệt đồng thời 2 hồ sơ trùng biển: đúng 1 thành công', async () => {
     const a = await registerVia(owner, '43A11122');
     const b = await registerVia(outsider, '43-A-111.22', aptB);

@@ -135,6 +135,26 @@ describe('UC-27/28 tạo phiếu', () => {
     );
     expect((await as(tech1).post('/api/service-requests', {})).status).toBe(403);
   });
+
+  test('danh mục phải thuộc loại phiếu: sửa chữa + tiếng ồn bị 400; thang máy dùng cho cả hai', async () => {
+    const body = (requestType, category) => ({
+      apartmentId: String(aptA._id),
+      requestType,
+      category,
+      title: 'Kiểm tra danh mục',
+      description: 'Mô tả đủ dài',
+    });
+    const bad = await as(owner).post('/api/service-requests', body('repair', 'noise'));
+    expect(bad.status).toBe(400);
+    expect(bad.body.error.details).toEqual([
+      { field: 'category', message: 'Danh mục không thuộc loại phiếu đã chọn' },
+    ]);
+    expect((await as(owner).post('/api/service-requests', body('complaint', 'electric'))).status).toBe(400);
+    expect((await as(owner).post('/api/service-requests', body('repair', 'elevator'))).status).toBe(201);
+    expect((await as(owner).post('/api/service-requests', body('complaint', 'elevator'))).status).toBe(201);
+    // Dọn để không ảnh hưởng các test phạm vi xem phía sau
+    await ServiceRequest.deleteMany({ title: 'Kiểm tra danh mục' });
+  });
 });
 
 // ======================================================================== UC-29 phạm vi xem
@@ -327,6 +347,58 @@ describe('Từ chối và chuyển người', () => {
   });
 });
 
+// ======================================================================== Cư dân rút phiếu
+describe('Cư dân rút phiếu', () => {
+  test('chờ tiếp nhận: người tạo rút được (không cần lý do), có lịch sử, không báo ai', async () => {
+    const r = await createVia(owner, { title: 'Gửi nhầm' });
+    const u = `/api/service-requests/${r._id}`;
+    expect((await as(owner).get(u)).body.data.allowedActions).toContain('cancel');
+    const res = await as(owner).patch(`${u}/cancel`, {});
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ status: 'cancelled' });
+    expect((await as(owner).get(u)).body.data.allowedActions).toEqual([]);
+    expect(res.body.data.cancelledAt).toBeTruthy();
+    expect(await RequestHistory.exists({ requestId: r._id, action: 'cancel', newStatus: 'cancelled' })).toBeTruthy();
+    expect(await Notification.exists({ type: 'service_request_cancelled' })).toBeFalsy();
+  });
+
+  test('đã phân công: rút được, báo nhân viên; nhân viên không còn thấy trong việc đang làm', async () => {
+    const r = await createVia(owner, { title: 'Tự sửa được rồi' });
+    const u = `/api/service-requests/${r._id}`;
+    await as(manager).patch(`${u}/assign`, assignBody(tech1));
+    const res = await as(owner).patch(`${u}/cancel`, { reason: 'Đã tự thay cầu chì' });
+    expect(res.body.data).toMatchObject({ status: 'cancelled', cancelReason: 'Đã tự thay cầu chì' });
+    expect(
+      await Notification.exists({ userId: tech1.user._id, type: 'service_request_cancelled' })
+    ).toBeTruthy();
+    const mine = await as(tech1).get('/api/me/assignments?tab=active');
+    expect(mine.body.data.map((i) => i._id)).not.toContain(r._id);
+    // Đã rút thì không làm gì tiếp được
+    expect((await as(tech1).patch(`${u}/start`)).status).toBe(409);
+  });
+
+  test('đang xử lý: không rút được (409); người không phải người tạo: 403', async () => {
+    const r = await createVia(owner, { title: 'Đang sửa' });
+    const u = `/api/service-requests/${r._id}`;
+    expect((await as(member).patch(`${u}/cancel`, {})).status).toBe(403);
+    await as(manager).patch(`${u}/assign`, assignBody(tech1));
+    await as(tech1).patch(`${u}/start`);
+    expect((await as(owner).get(u)).body.data.allowedActions).not.toContain('cancel');
+    expect((await as(owner).patch(`${u}/cancel`, {})).status).toBe(409);
+  });
+
+  test('đã từng xử lý (làm lại rồi giao lại): không rút được, dùng nghiệm thu', async () => {
+    const r = await createVia(owner, { title: 'Làm lại' });
+    const u = `/api/service-requests/${r._id}`;
+    await as(manager).patch(`${u}/assign`, assignBody(tech1));
+    await as(tech1).patch(`${u}/start`);
+    await as(tech1).patch(`${u}/finish`, { note: 'Đã xử lý xong' });
+    await as(owner).patch(`${u}/reopen`, { reason: 'Chưa ổn' });
+    await as(manager).patch(`${u}/assign`, assignBody(tech2));
+    expect((await as(owner).patch(`${u}/cancel`, {})).status).toBe(403);
+  });
+});
+
 // ======================================================================== Máy trạng thái (bảng)
 describe('Máy trạng thái: mọi cặp hành động / trạng thái sai đều 409', () => {
   const ACTORS = () => ({
@@ -337,6 +409,7 @@ describe('Máy trạng thái: mọi cặp hành động / trạng thái sai đ�
     finish: tech1.user,
     confirm: owner.user,
     reopen: owner.user,
+    cancel: owner.user,
   });
   const INPUT = {
     reject: { reason: 'abc' },
@@ -346,8 +419,9 @@ describe('Máy trạng thái: mọi cặp hành động / trạng thái sai đ�
     finish: { note: 'abc' },
     confirm: { rating: 4 },
     reopen: { reason: 'abc' },
+    cancel: {},
   };
-  const STATUSES = ['pending', 'rejected', 'assigned', 'in_progress', 'waiting_confirmation', 'reopened', 'closed'];
+  const STATUSES = ['pending', 'rejected', 'assigned', 'in_progress', 'waiting_confirmation', 'reopened', 'closed', 'cancelled'];
 
   test.each(STATUSES)('từ trạng thái %s', async (status) => {
     const actors = ACTORS();

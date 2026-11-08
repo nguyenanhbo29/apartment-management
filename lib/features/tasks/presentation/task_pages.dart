@@ -9,6 +9,7 @@ import '../../../core/widgets/common.dart';
 import '../../../core/widgets/media_widgets.dart';
 import '../../../core/widgets/paged_list_view.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../../core/widgets/unsaved_changes_guard.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/data/app_user.dart';
 import '../../service_requests/data/models.dart';
@@ -459,27 +460,35 @@ class _TaskFormPageState extends ConsumerState<TaskFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_reassign ? 'Chuyển người phụ trách' : 'Giao nhiệm vụ'),
+    return UnsavedChangesGuard(
+      isDirty: () =>
+          _title.text.trim().isNotEmpty ||
+          _description.text.trim().isNotEmpty ||
+          _location.text.trim().isNotEmpty ||
+          _note.text.trim().isNotEmpty ||
+          _staff != null,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_reassign ? 'Chuyển người phụ trách' : 'Giao nhiệm vụ'),
+        ),
+        body: !_reassign
+            ? _form(null)
+            : ref
+                  .watch(taskDetailProvider(widget.taskId!))
+                  .when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => ErrorView(error: e),
+                    data: (t) {
+                      // Lần đầu: mặc định bộ phận hiện tại của nhiệm vụ
+                      if (!_initialized) {
+                        _initialized = true;
+                        _department = t.department ?? _department;
+                      }
+                      return _form(t);
+                    },
+                  ),
       ),
-      body: !_reassign
-          ? _form(null)
-          : ref
-                .watch(taskDetailProvider(widget.taskId!))
-                .when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => ErrorView(error: e),
-                  data: (t) {
-                    // Lần đầu: mặc định bộ phận hiện tại của nhiệm vụ
-                    if (!_initialized) {
-                      _initialized = true;
-                      _department = t.department ?? _department;
-                    }
-                    return _form(t);
-                  },
-                ),
     );
   }
 }
@@ -566,7 +575,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
           16,
           16,
           16,
-          MediaQuery.of(ctx).viewInsets.bottom + 16,
+          // Chừa thanh điều hướng hệ thống (gesture bar) và bàn phím
+          MediaQuery.of(ctx).viewInsets.bottom +
+              MediaQuery.of(ctx).viewPadding.bottom +
+              16,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

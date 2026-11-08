@@ -5,6 +5,7 @@ const Apartment = require('../models/Apartment');
 const ApartmentResident = require('../models/ApartmentResident');
 const apartmentService = require('../services/apartment.service');
 const Amenity = require('../models/Amenity');
+const { seedOperations } = require('./seedOperations');
 
 /**
  * Dữ liệu demo. Chạy lại nhiều lần không tạo trùng (tìm theo email / mã căn hộ).
@@ -130,10 +131,11 @@ const AMENITIES = [
     openTime: '16:00',
     closeTime: '22:00',
     slotDuration: 120,
-    capacity: 1,
+    // Sức chứa tính theo SỐ NGƯỜI mỗi khung giờ (không phải số căn hộ)
+    capacity: 15,
     requiresApproval: true,
     cancelDeadlineHours: 24,
-    rules: 'Mỗi lượt một căn hộ. Dọn dẹp sau khi dùng, không gây ồn sau 22:00.',
+    rules: 'Tối đa 15 người mỗi khung giờ. Dọn dẹp sau khi dùng, không gây ồn sau 22:00.',
   },
   {
     name: 'Phòng sinh hoạt cộng đồng',
@@ -141,7 +143,7 @@ const AMENITIES = [
     openTime: '08:00',
     closeTime: '21:00',
     slotDuration: 120,
-    capacity: 1,
+    capacity: 30,
     requiresApproval: true,
     cancelDeadlineHours: 12,
   },
@@ -161,6 +163,8 @@ async function seedAmenities(manager) {
   const apartments = await seedApartments();
   await seedResidences(users, apartments);
   await seedAmenities(Object.values(users).find((u) => u.role === 'manager'));
+  // Dữ liệu demo module vận hành (phiếu, nhiệm vụ, xe, khách, lượt đặt)
+  await seedOperations(users, apartments);
   console.log('Seed xong.');
   await mongoose.disconnect();
 })().catch(async (err) => {

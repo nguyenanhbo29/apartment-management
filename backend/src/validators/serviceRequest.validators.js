@@ -2,6 +2,7 @@ const { z, objectId, pagination } = require('./common');
 const {
   REQUEST_TYPE,
   REQUEST_CATEGORY,
+  REQUEST_CATEGORIES_BY_TYPE,
   REQUEST_PRIORITY,
   REQUEST_STATUS,
   DEPARTMENTS,
@@ -22,6 +23,15 @@ const createRequest = z.object({
   title: z.string().trim().min(3, 'Tiêu đề tối thiểu 3 ký tự').max(150),
   description: z.string().trim().min(5, 'Mô tả tối thiểu 5 ký tự').max(2000),
   priority: priority.default(REQUEST_PRIORITY.NORMAL),
+}).superRefine((d, ctx) => {
+  // Danh mục phải thuộc loại phiếu (vd "Sửa chữa" không có "Tiếng ồn")
+  if (!REQUEST_CATEGORIES_BY_TYPE[d.requestType].includes(d.category)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['category'],
+      message: 'Danh mục không thuộc loại phiếu đã chọn',
+    });
+  }
 });
 
 const listMine = z.object({ ...pagination, status: status.optional(), type: type.optional() });
@@ -68,7 +78,11 @@ const confirm = z.object({
 
 const reopen = z.object({ reason });
 
+// Rút phiếu: lý do không bắt buộc
+const cancel = z.object({ reason: z.string().trim().max(1000).optional() });
+
 module.exports = {
+  cancel,
   createRequest,
   listMine,
   listForManager,

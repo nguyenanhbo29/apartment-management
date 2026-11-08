@@ -26,7 +26,8 @@ class _StaffReportPageState extends ConsumerState<StaffReportPage> {
   RangePreset _preset = RangePreset.last30;
   late DateTimeRange _range = RangePreset.last30.resolve(DateTime.now())!;
   Department? _department;
-  int _sortColumn = 2;
+  // Mặc định sắp theo "Hoàn thành" giảm dần; tìm theo tên để thêm cột không làm lệch
+  int _sortColumn = _columns.indexWhere((c) => c.$1 == 'Hoàn thành');
   bool _ascending = false;
   late Future<StaffPerformanceReport> _future = _load();
 
@@ -43,8 +44,13 @@ class _StaffReportPageState extends ConsumerState<StaffReportPage> {
     ('Nhân viên', 'Họ tên', (r) => r.fullName),
     (
       'Được giao',
-      'Số lần được giao việc (phiếu + nhiệm vụ) trong kỳ',
+      'Số việc (phiếu + nhiệm vụ) được giao trong kỳ mà nhân viên vẫn giữ hoặc đã làm xong. Việc đã hủy / cư dân rút không tính',
       (r) => r.assigned,
+    ),
+    (
+      'Bị chuyển đi',
+      'Việc được giao trong kỳ nhưng sau đó chuyển sang người khác (xem lý do trong lịch sử phiếu / nhiệm vụ)',
+      (r) => r.transferredAway,
     ),
     (
       'Hoàn thành',
@@ -210,6 +216,7 @@ class _StaffReportPageState extends ConsumerState<StaffReportPage> {
                                   ),
                                 ),
                                 DataCell(Text('${r.assigned}')),
+                                DataCell(Text('${r.transferredAway}')),
                                 DataCell(Text('${r.completed}')),
                                 DataCell(Text(percent(r.onTimeRate))),
                                 DataCell(

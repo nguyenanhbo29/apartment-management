@@ -87,6 +87,7 @@ class StaffPerformanceRow {
     required this.department,
     required this.isActive,
     required this.assigned,
+    this.transferredAway = 0,
     required this.completed,
     required this.onTime,
     required this.onTimeRate,
@@ -101,6 +102,9 @@ class StaffPerformanceRow {
   final Department? department;
   final bool isActive;
   final int assigned;
+
+  /// Việc được giao trong kỳ nhưng sau đó đã chuyển sang người khác.
+  final int transferredAway;
   final int completed;
   final int onTime;
   final double? onTimeRate;
@@ -117,6 +121,7 @@ class StaffPerformanceRow {
       department: Department.parse(staff['department'] as String?),
       isActive: staff['status'] != 'inactive',
       assigned: intOf(j['assigned']) ?? 0,
+      transferredAway: intOf(j['transferredAway']) ?? 0,
       completed: intOf(j['completed']) ?? 0,
       onTime: intOf(j['onTime']) ?? 0,
       onTimeRate: _double(j['onTimeRate']),

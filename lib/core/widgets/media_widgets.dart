@@ -184,7 +184,7 @@ Future<String?> reasonDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('Hủy'),
+          child: const Text('Đóng'),
         ),
         FilledButton(
           style: destructive

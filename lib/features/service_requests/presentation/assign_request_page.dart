@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/common.dart';
+import '../../../core/widgets/unsaved_changes_guard.dart';
 import '../../auth/data/app_user.dart';
 import '../../staff/data/staff_repository.dart';
 import '../../staff/presentation/staff_picker.dart';
@@ -128,104 +129,107 @@ class _AssignRequestPageState extends ConsumerState<AssignRequestPage> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(requestDetailProvider(widget.requestId));
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.reassign ? 'Chuyển người xử lý' : 'Phân công'),
-      ),
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorView(
-          error: e,
-          onRetry: () =>
-              ref.invalidate(requestDetailProvider(widget.requestId)),
+    return UnsavedChangesGuard(
+      isDirty: () => _staff != null || _note.text.trim().isNotEmpty,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.reassign ? 'Chuyển người xử lý' : 'Phân công'),
         ),
-        data: (r) {
-          _init(r);
-          return Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Text(
-                      '${r.code} · ${r.title}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<Department>(
-                      initialValue: _department,
-                      decoration: const InputDecoration(labelText: 'Bộ phận'),
-                      items: [
-                        for (final d in Department.values)
-                          DropdownMenuItem(value: d, child: Text(d.label)),
-                      ],
-                      onChanged: (d) => setState(() {
-                        _department = d;
-                        _staff = null;
-                      }),
-                    ),
-                    const SizedBox(height: 16),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.schedule),
-                      title: const Text('Hạn xử lý'),
-                      subtitle: Text(formatDateTime(_deadline)),
-                      trailing: const Icon(Icons.edit_calendar_outlined),
-                      onTap: _pickDeadline,
-                    ),
-                    if (!widget.reassign)
-                      DropdownButtonFormField<RequestPriority>(
-                        initialValue: _priority,
-                        decoration: const InputDecoration(
-                          labelText: 'Mức độ ưu tiên',
-                        ),
+        body: async.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorView(
+            error: e,
+            onRetry: () =>
+                ref.invalidate(requestDetailProvider(widget.requestId)),
+          ),
+          data: (r) {
+            _init(r);
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Text(
+                        '${r.code} · ${r.title}',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<Department>(
+                        initialValue: _department,
+                        decoration: const InputDecoration(labelText: 'Bộ phận'),
                         items: [
-                          for (final p in RequestPriority.values)
-                            DropdownMenuItem(value: p, child: Text(p.label)),
+                          for (final d in Department.values)
+                            DropdownMenuItem(value: d, child: Text(d.label)),
                         ],
-                        onChanged: (p) => setState(() => _priority = p),
+                        onChanged: (d) => setState(() {
+                          _department = d;
+                          _staff = null;
+                        }),
                       ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _note,
-                      maxLines: 2,
-                      decoration: InputDecoration(
-                        labelText: widget.reassign
-                            ? 'Lý do chuyển người'
-                            : 'Ghi chú nội bộ (không bắt buộc)',
+                      const SizedBox(height: 16),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.schedule),
+                        title: const Text('Hạn xử lý'),
+                        subtitle: Text(formatDateTime(_deadline)),
+                        trailing: const Icon(Icons.edit_calendar_outlined),
+                        onTap: _pickDeadline,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Nhân viên',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    StaffPicker(
-                      key: ValueKey(_department),
-                      department: _department!,
-                      excludeId: widget.reassign ? r.assignedStaffId : null,
-                      selectedId: _staff?.user.id,
-                      onSelected: (s) => setState(() => _staff = s),
-                    ),
-                  ],
+                      if (!widget.reassign)
+                        DropdownButtonFormField<RequestPriority>(
+                          initialValue: _priority,
+                          decoration: const InputDecoration(
+                            labelText: 'Mức độ ưu tiên',
+                          ),
+                          items: [
+                            for (final p in RequestPriority.values)
+                              DropdownMenuItem(value: p, child: Text(p.label)),
+                          ],
+                          onChanged: (p) => setState(() => _priority = p),
+                        ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _note,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          labelText: widget.reassign
+                              ? 'Lý do chuyển người'
+                              : 'Ghi chú nội bộ (không bắt buộc)',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Nhân viên',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      StaffPicker(
+                        key: ValueKey(_department),
+                        department: _department!,
+                        excludeId: widget.reassign ? r.assignedStaffId : null,
+                        selectedId: _staff?.user.id,
+                        onSelected: (s) => setState(() => _staff = s),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: LoadingButton(
-                      loading: _saving,
-                      onPressed: () => _submit(r),
-                      label: widget.reassign ? 'Chuyển người' : 'Phân công',
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: LoadingButton(
+                        loading: _saving,
+                        onPressed: () => _submit(r),
+                        label: widget.reassign ? 'Chuyển người' : 'Phân công',
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

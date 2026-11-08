@@ -18,6 +18,7 @@ const _shortStatus = {
   RequestStatus.reopened: 'Làm\nlại',
   RequestStatus.closed: 'Đã\nđóng',
   RequestStatus.rejected: 'Từ\nchối',
+  RequestStatus.cancelled: 'Đã\nrút',
 };
 
 /// UC-47: Dashboard vận hành (Manager). Số liệu thật; bấm vào số để mở danh sách nguồn.
@@ -82,7 +83,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final d = snap.data!;
-                final statuses = RequestStatus.values;
+                // Phiếu cư dân tự rút không phải việc vận hành: không vẽ cột
+                final statuses = RequestStatus.values
+                    .where((s) => s != RequestStatus.cancelled)
+                    .toList();
                 return RefreshIndicator(
                   onRefresh: () async => _reload(),
                   child: ListView(

@@ -45,5 +45,6 @@ router.patch(
 // UC-34: người tạo phiếu
 router.patch('/:id/confirm', resident, validate({ params: idParams, body: v.confirm }), ctrl.transition('confirm'));
 router.patch('/:id/reopen', resident, validate({ params: idParams, body: v.reopen }), ctrl.transition('reopen'));
+router.patch('/:id/cancel', resident, validate({ params: idParams, body: v.cancel }), ctrl.transition('cancel'));
 
 module.exports = router;

@@ -22,6 +22,27 @@ enum RequestType {
 
   static RequestType parse(String? v) =>
       _parse(values, (e) => e.name, v, repair);
+
+  /// Danh mục hợp lệ cho loại phiếu — giống REQUEST_CATEGORIES_BY_TYPE ở backend.
+  /// Thang máy, vệ sinh, khác dùng cho cả hai loại.
+  List<RequestCategory> get categories => switch (this) {
+    repair => const [
+      RequestCategory.electric,
+      RequestCategory.plumbing,
+      RequestCategory.internet,
+      RequestCategory.elevator,
+      RequestCategory.hygiene,
+      RequestCategory.other,
+    ],
+    complaint => const [
+      RequestCategory.elevator,
+      RequestCategory.hygiene,
+      RequestCategory.noise,
+      RequestCategory.security,
+      RequestCategory.service,
+      RequestCategory.other,
+    ],
+  };
 }
 
 enum RequestCategory {
@@ -67,7 +88,8 @@ enum RequestStatus {
     StatusTone.warning,
   ),
   reopened('reopened', 'Yêu cầu làm lại', StatusTone.danger),
-  closed('closed', 'Đã đóng', StatusTone.success);
+  closed('closed', 'Đã đóng', StatusTone.success),
+  cancelled('cancelled', 'Đã rút', StatusTone.neutral);
 
   const RequestStatus(this.api, this.label, this.tone);
   final String api;
@@ -86,7 +108,8 @@ enum RequestAction {
   start('Bắt đầu xử lý'),
   finish('Báo hoàn thành'),
   confirm('Nghiệm thu'),
-  reopen('Yêu cầu làm lại');
+  reopen('Yêu cầu làm lại'),
+  cancel('Rút phiếu');
 
   const RequestAction(this.label);
   final String label;
@@ -141,6 +164,7 @@ class TimelineEntry {
     'finish': 'Báo hoàn thành',
     'confirm': 'Nghiệm thu',
     'reopen': 'Yêu cầu làm lại',
+    'cancel': 'Cư dân rút phiếu',
     'auto_closed': 'Tự đóng',
   };
 
@@ -188,6 +212,7 @@ class ServiceRequest {
     this.resultNote,
     this.resultImages = const [],
     this.rejectReason,
+    this.cancelReason,
     this.rating,
     this.feedback,
     this.reopenCount = 0,
@@ -220,6 +245,7 @@ class ServiceRequest {
   final String? resultNote;
   final List<String> resultImages;
   final String? rejectReason;
+  final String? cancelReason;
   final int? rating;
   final String? feedback;
   final int reopenCount;
@@ -258,6 +284,7 @@ class ServiceRequest {
       resultNote: j['resultNote'] as String?,
       resultImages: _strings(j['resultImages']),
       rejectReason: j['rejectReason'] as String?,
+      cancelReason: j['cancelReason'] as String?,
       rating: (j['rating'] as num?)?.toInt(),
       feedback: j['feedback'] as String?,
       reopenCount: (j['reopenCount'] as num?)?.toInt() ?? 0,

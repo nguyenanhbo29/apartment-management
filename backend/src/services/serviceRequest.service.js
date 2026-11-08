@@ -41,6 +41,13 @@ const TRANSITIONS = Object.freeze({
   finish: { from: [S.IN_PROGRESS], to: S.WAITING_CONFIRMATION, can: isAssignee },
   confirm: { from: [S.WAITING_CONFIRMATION], to: S.CLOSED, can: isCreator },
   reopen: { from: [S.WAITING_CONFIRMATION], to: S.REOPENED, can: isCreator },
+  // Cư dân rút phiếu khi chưa ai bắt đầu làm. Phiếu đã từng xử lý (làm lại rồi giao lại)
+  // không rút được: việc đã làm, cư dân dùng nghiệm thu.
+  cancel: {
+    from: [S.PENDING, S.ASSIGNED],
+    to: S.CANCELLED,
+    can: (u, r) => isCreator(u, r) && !r.firstFinishedAt,
+  },
 });
 
 /** Các hành động người xem được làm ngay lúc này (để app hiện nút; backend vẫn kiểm tra lại). */
@@ -285,6 +292,9 @@ async function buildChanges(action, request, input, now) {
     case 'reopen':
       return { set: { waitingSince: null }, inc: { reopenCount: 1 }, note: input.reason };
 
+    case 'cancel':
+      return { set: { cancelledAt: now, cancelReason: input.reason }, note: input.reason };
+
     default:
       throw new Error(`Hành động không hỗ trợ: ${action}`);
   }
@@ -409,6 +419,18 @@ const NOTIFY = {
       body: `Đánh giá ${r.rating}/5`,
     },
   ],
+  // Chờ tiếp nhận: chưa ai nhận, không cần báo. Đã phân công: báo nhân viên khỏi đi
+  cancel: (r) =>
+    r.assignedStaffId
+      ? [
+          {
+            type: 'service_request_cancelled',
+            to: [r.assignedStaffId],
+            title: `Phiếu ${r.requestCode} đã được cư dân rút lại`,
+            body: r.cancelReason ? `Lý do: ${r.cancelReason}` : r.title,
+          },
+        ]
+      : [],
   reopen: (r) => [
     {
       type: 'service_request_reopened',
