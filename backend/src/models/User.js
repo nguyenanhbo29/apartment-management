@@ -15,8 +15,14 @@ const userSchema = new mongoose.Schema(
     status: { type: String, enum: Object.values(USER_STATUS), default: USER_STATUS.ACTIVE },
     mustChangePassword: { type: Boolean, default: false },
     buildingId: { type: String, default: 'main' },
+    // Tăng mỗi khi đổi/đặt lại mật khẩu -> mọi JWT cũ (mang tv cũ) bị vô hiệu
+    tokenVersion: { type: Number, default: 0, select: false },
+    passwordChangedAt: Date,
+    lastLoginAt: Date,
     resetOtpHash: { type: String, select: false },
     resetOtpExpires: { type: Date, select: false },
+    resetOtpSentAt: { type: Date, select: false },
+    resetOtpAttempts: { type: Number, default: 0, select: false },
   },
   { timestamps: true }
 );
@@ -27,11 +33,21 @@ userSchema.methods.verifyPassword = function verifyPassword(plain) {
 
 userSchema.statics.hashPassword = (plain) => bcrypt.hash(plain, 10);
 
+// Đặt mật khẩu mới và vô hiệu toàn bộ phiên đăng nhập cũ
+userSchema.methods.setPassword = async function setPassword(plain) {
+  this.passwordHash = await bcrypt.hash(plain, 10);
+  this.tokenVersion = (this.tokenVersion || 0) + 1;
+  this.passwordChangedAt = new Date();
+};
+
 userSchema.methods.toJSON = function toJSON() {
   const o = this.toObject();
   delete o.passwordHash;
+  delete o.tokenVersion;
   delete o.resetOtpHash;
   delete o.resetOtpExpires;
+  delete o.resetOtpSentAt;
+  delete o.resetOtpAttempts;
   delete o.__v;
   return o;
 };

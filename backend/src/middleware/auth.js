@@ -5,7 +5,7 @@ const { AppError, ERROR_CODES } = require('../utils/errors');
 const { USER_STATUS } = require('../utils/constants');
 
 const signToken = (user) =>
-  jwt.sign({ sub: user._id.toString(), role: user.role }, env.jwtSecret, {
+  jwt.sign({ sub: user._id.toString(), tv: user.tokenVersion || 0 }, env.jwtSecret, {
     expiresIn: env.jwtExpiresIn,
   });
 
@@ -21,8 +21,11 @@ async function authenticate(req, _res, next) {
   } catch {
     throw new AppError(ERROR_CODES.UNAUTHORIZED, 'Token không hợp lệ hoặc đã hết hạn');
   }
-  const user = await User.findById(payload.sub);
+  const user = await User.findById(payload.sub).select('+tokenVersion');
   if (!user) throw new AppError(ERROR_CODES.UNAUTHORIZED, 'Tài khoản không tồn tại');
+  if ((payload.tv || 0) !== (user.tokenVersion || 0)) {
+    throw new AppError(ERROR_CODES.UNAUTHORIZED, 'Mật khẩu đã thay đổi, vui lòng đăng nhập lại');
+  }
   if (user.status !== USER_STATUS.ACTIVE) {
     throw new AppError(ERROR_CODES.ACCOUNT_INACTIVE, 'Tài khoản đã bị khóa');
   }

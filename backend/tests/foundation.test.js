@@ -1,21 +1,13 @@
 const request = require('supertest');
-const mongoose = require('mongoose');
 const app = require('../src/app');
-const { connectDb } = require('../src/config/db');
 const User = require('../src/models/User');
 const Notification = require('../src/models/Notification');
-const { signToken, authorize } = require('../src/middleware/auth');
+const { authorize } = require('../src/middleware/auth');
 const { notifyUsers } = require('../src/services/notify.service');
+const { setupDb, teardownDb, createUser, bearer } = require('./helpers');
 
-beforeAll(async () => {
-  await connectDb();
-  await mongoose.connection.dropDatabase();
-  await User.init();
-});
-afterAll(async () => {
-  await mongoose.connection.dropDatabase();
-  await mongoose.disconnect();
-});
+beforeAll(setupDb);
+afterAll(teardownDb);
 
 describe('khung backend', () => {
   test('health trả format chung', async () => {
@@ -32,33 +24,29 @@ describe('khung backend', () => {
   });
 
   test('không token -> UNAUTHORIZED', async () => {
-    const res = await request(app).get('/api/me-check');
+    const res = await request(app).get('/api/users/me');
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('UNAUTHORIZED');
   });
 
   test('token hợp lệ qua được, tài khoản khóa bị chặn', async () => {
-    const user = await User.create({
-      email: 'a@x.com',
-      passwordHash: await User.hashPassword('pw123456'),
-      fullName: 'A',
-      role: 'resident',
-    });
-    const token = signToken(user);
-    const okRes = await request(app).get('/api/me-check').set('Authorization', `Bearer ${token}`);
+    const { user, token } = await createUser();
+    const okRes = await request(app).get('/api/users/me').set(bearer(token));
     expect(okRes.status).toBe(200);
     expect(okRes.body.data.role).toBe('resident');
+    expect(okRes.body.data.passwordHash).toBeUndefined();
 
     user.status = 'inactive';
     await user.save();
-    const blocked = await request(app).get('/api/me-check').set('Authorization', `Bearer ${token}`);
+    const blocked = await request(app).get('/api/users/me').set(bearer(token));
     expect(blocked.status).toBe(403);
     expect(blocked.body.error.code).toBe('ACCOUNT_INACTIVE');
   });
 
-  test('email duy nhất', async () => {
+  test('email duy nhất (không phân biệt hoa thường)', async () => {
+    await createUser({ email: 'dup@x.com' });
     await expect(
-      User.create({ email: 'A@x.com', passwordHash: 'x', fullName: 'B', role: 'resident' })
+      User.create({ email: 'DUP@x.com', passwordHash: 'x', fullName: 'B', role: 'resident' })
     ).rejects.toMatchObject({ code: 11000 });
   });
 
@@ -82,14 +70,14 @@ describe('khung backend', () => {
   });
 
   test('notifyUsers tạo thông báo, loại trùng', async () => {
-    const u = await User.findOne({ email: 'a@x.com' });
+    const { user } = await createUser();
     const res = await notifyUsers({
-      userIds: [u._id, u._id, null],
+      userIds: [user._id, user._id, null],
       type: 'test',
       title: 'Hi',
       link: { kind: 'x', id: '1' },
     });
     expect(res).toHaveLength(1);
-    expect(await Notification.countDocuments({ userId: u._id })).toBe(1);
+    expect(await Notification.countDocuments({ userId: user._id })).toBe(1);
   });
 });
